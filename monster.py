@@ -1,6 +1,15 @@
 import uuid, json
 from flask import send_from_directory
 
+class App:
+    def __init__(self) -> None:
+        def default_Route(path):
+            response=send_from_directory("public", path)
+            return set_headers(response, path)
+        self.default_Route=default_Route
+    def on_404(self, path):
+        return "Error: 404 Not Found /"+path
+
 def set_headers(response, path):
     if path.endswith('.js'):
         response.headers['Content-Type'] = 'application/javascript'
@@ -42,6 +51,8 @@ def render(path, variables=None):
     return component
 
 def init(app):
+    MonsterApp=App()
     @app.route('/<path:path>')
     def catch_all(path):
-        return set_headers(send_from_directory("public", path), path)
+        return MonsterApp.default_Route(path)
+    return MonsterApp
