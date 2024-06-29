@@ -28,13 +28,13 @@ def set_headers(response, path):
     response.headers["Expires"]="0"
     return response
 
-def render(path, variables=None):
+def render(path, variables={}):
     try:
         component=open(path).read()
     except:
         component=open("components/"+path+".html").read()
-    if variables==None:
-        variables=locals()|globals()
+    tokens=tokeniser(component)
+    component=renderTokens(parser(tokens=tokens), variables=variables)
     replace_maps={}
     for variable in variables:
         if "{"+variable+"}" in component:
@@ -124,7 +124,7 @@ def tokeniser(code):
         out.append({"type":"variable", "value":cache})
     return out
 
-def parser(tokens, depth=0):
+def parser(tokens):
     out=[]
     i=-1
     while True:
@@ -149,7 +149,7 @@ def parser(tokens, depth=0):
             while True:
                 j+=1
                 if j>=len(tokens):
-                    raise Exception("unexpected EOF while parsing HTML file"+str(depth))
+                    raise Exception("unexpected EOF while parsing HTML file")
                 tagEnd.append(tokens[j])
                 if len(tagEnd)>=4 and tagEnd[len(tagEnd)-4]["type"]=="operator" and tagEnd[len(tagEnd)-4]["value"]=="<" and tagEnd[len(tagEnd)-3]["type"]=="operator" and tagEnd[len(tagEnd)-3]["value"]=="/" and tagEnd[len(tagEnd)-2]==tagStart[0] and tagEnd[len(tagEnd)-1]["type"]=="operator" and tagEnd[len(tagEnd)-1]["value"]==">":
                     count-=1
@@ -177,10 +177,107 @@ def parser(tokens, depth=0):
                     index+=2
                     continue
                 attributes[tagStart[index]["value"]]={"type":"raw", "value":"true"}
-            out.append({"type":"tag", "value":tagName, "children":parser(tagEnd, depth=depth+1), "attributes":attributes})
+            out.append({"type":"tag", "value":tagName, "children":parser(tagEnd), "attributes":attributes})
             continue
         out.append(tokens[i])
     return out
+
+def renderTokens(tokens, variables={}):
+    final=""
+    i=-1
+    while True:
+        i+=1
+        if i>=len(tokens):
+            break
+        if len(tokens)-i>=3 and tokens[i]["type"]=="bracket" and tokens[i]["value"]=="{" and tokens[i+1]["type"]=="variable" and tokens[i+2]["type"]=="bracket" and tokens[i+2]["value"]=="}":
+            if tokens[i+1]["value"] not in variables:
+                final+="""
+                <script>
+                    (()=>{
+                        var signal=GetSignal("{id}")
+                        var element=document.createElement("span")
+                        var value=signal.Value()
+                        if (typeof value!="string") {
+                            value=JSON.stringify(value)
+                        }
+                        element.innerText=value
+                        document.currentScript.insertAdjacentElement("afterend", element)
+                        OnChange("{id}", ()=>{
+                            var newElement=document.createElement("span")
+                            var value=signal.Value()
+                            if (typeof value!="string") {
+                                value=JSON.stringify(value)
+                            }
+                            newElement.innerText=value
+                            element.replaceWith(newElement)
+                            element=newElement
+                        })
+                    })()
+                </script>
+                """.replace("{id}", tokens[i+1]["value"])
+            else:
+                final+="{"+tokens[i+1]["value"]+"}"+"\n\n"
+            i+=2
+            continue
+        if tokens[i]["type"]=="tag" and tokens[i]["value"] not in ["if"]:
+            tag=tokens[i]
+            final+="<"+tokens[i]["value"]+">"
+            if len(tag["attributes"])!=0:
+                script="var parentElement=document.currentScript.parentElement"
+                for attribute in tag["attributes"]:
+                    if tag["attributes"][attribute]["type"]=="raw":
+                        attributeValue="\""
+                        signals=[]
+                        cache=""
+                        inSignal=False
+                        for x in tag["attributes"][attribute]["value"]:
+                            if x=="{":
+                                if not inSignal:
+                                    inSignal=True
+                                    continue
+                            if x=="}":
+                                if inSignal:
+                                    inSignal=False
+                                    attributeValue+="\"+"+cache+".Value()+\""
+                                    signals.append(cache)
+                                    cache=""
+                                    continue
+                            if inSignal:
+                                cache+=x
+                            else:
+                                attributeValue+=x
+                        attributeValue+="\""
+                        script+=f"""
+                        parentElement.setAttribute(\"{attribute}\", {attributeValue})
+                        var signals={json.dumps(signals)}
+                        for (var signal in signals) {{
+                            signal=signals[signal]
+                            OnChange(signal, ()=>{{
+                                parentElement.setAttribute(\"{attribute}\", {attributeValue})
+                            }})
+                        }}
+                        """
+                final+="\n<script>"+"(()=>{\n"+script+"\n"+"})()"+"</script>"
+            final+="\n"+renderTokens(tag["children"], variables=variables)+"\n"
+            final+="</"+tag["value"]+">\n"
+            continue
+        if tokens[i]["type"]=="tag" and tokens[i]["value"] in ["if"]:
+            script="<div>\n"+"<script>\nvar parentElement=document.currentScript.parentElement\n"
+            condition=""
+            random_uuid=uuid.uuid4().__str__()
+            for attribute in tokens[i]["attributes"]:
+                condition+=f"GetSignal(\"{attribute}\").Value() && "
+                script+=f"""
+                OnChange(\"{attribute}\", ()=>{{
+                    parentElement.style.display=({random_uuid}) ? "" : "none"
+                }})
+                """
+            script=script.replace(random_uuid, condition+"true")
+            script+="\n</script>"+renderTokens(tokens[i]["children"], variables)+"</div>"
+            final+=script
+            continue
+        final+=tokens[i]["value"]+"\n"
+    return final
 
 def init(app):
     MonsterApp=App()

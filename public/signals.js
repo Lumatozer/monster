@@ -56,5 +56,3 @@ function DerivedFrom(id, value, dependsOn) {
 function GetSignal(id) {
     return signals[id]
 }
-
-export {Signal, DerivedFrom, OnChange, DeleteCallback, GetSignal}
