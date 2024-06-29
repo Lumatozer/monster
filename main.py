@@ -8,8 +8,6 @@ init(app)
 @app.get("/")
 def home():
     signals=open("public/signals.js").read()
-    js=open("public/index.js").read()
-    component=render("hi", locals())
     print(tokeniser(open("components/index.html").read()))
     print(parser(tokeniser(open("components/index.html").read())))
     return render("index", locals())

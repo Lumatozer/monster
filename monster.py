@@ -237,9 +237,10 @@ def renderTokens(tokens, variables={}):
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"] not in ["if"]:
             tag=tokens[i]
-            final+="<"+tokens[i]["value"]+">"
+            final+="<"+tokens[i]["value"]+">"+"\n"+renderTokens(tag["children"], variables=variables)+"\n"
+            final+="</"+tag["value"]+">\n"
             if len(tag["attributes"])!=0:
-                script="var parentElement=document.currentScript.parentElement"
+                script="var parentElement=document.currentScript.previousElementSibling\n"
                 for attribute in tag["attributes"]:
                     if tag["attributes"][attribute]["type"]=="raw":
                         attributeValue="\""
@@ -274,16 +275,15 @@ def renderTokens(tokens, variables={}):
                         }}
                         """
                 final+="\n<script>"+"(()=>{\n"+script+"\n"+"})()"+"</script>"
-            final+="\n"+renderTokens(tag["children"], variables=variables)+"\n"
-            final+="</"+tag["value"]+">\n"
             continue
-        if tokens[i]["type"]=="tag" and tokens[i]["value"] in ["if"]:
+        if tokens[i]["type"]=="tag" and tokens[i]["value"]=="if":
             script="<div>\n"+"<script>\nvar parentElement=document.currentScript.parentElement\n"
             condition=""
             random_uuid=uuid.uuid4().__str__()
             for attribute in tokens[i]["attributes"]:
                 condition+=f"GetSignal(\"{attribute}\").Value() && "
                 script+=f"""
+                parentElement.style.display=({random_uuid}) ? "" : "none"
                 OnChange(\"{attribute}\", ()=>{{
                     parentElement.style.display=({random_uuid}) ? "" : "none"
                 }})
