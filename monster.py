@@ -60,6 +60,22 @@ def tokeniser(code):
         i+=1
         if i>=len(code):
             break
+        if len(out)>=3 and out[len(out)-3]["type"]=="operator" and out[len(out)-3]["value"]=="<" and out[len(out)-2]["type"]=="variable" and out[len(out)-2]["value"] in ["script", "style"] and out[len(out)-1]["type"]=="operator" and out[len(out)-1]["value"]==">":
+            tag=out[len(out)-2]["value"]
+            out=out[:len(out)-3]
+            inTag=""
+            j=i
+            while True:
+                j+=1
+                if j>=len(code):
+                    raise Exception("unexpected EOF while tokenising html file")
+                inTag+=code[j]
+                if "</"+tag+">" in inTag:
+                    inTag=inTag[:len(inTag)-len("</"+tag+">")]
+                    break
+            i=j
+            out.append({"type":tag, "value":inTag, "attributes":{}, "children":[]})
+            continue
         if in_string:
             if code[i]==string_quote:
                 out.append({"type":"string", "value":cache})
@@ -275,6 +291,10 @@ def renderTokens(tokens, variables={}):
             script=script.replace(random_uuid, condition+"true")
             script+="\n</script>"+renderTokens(tokens[i]["children"], variables)+"</div>"
             final+=script
+            continue
+        if tokens[i]["type"] in ["script", "style"]:
+            tag=tokens[i]["type"]
+            final+="<"+tag+">\n"+tokens[i]["value"]+"\n</"+tag+">"
             continue
         final+=tokens[i]["value"]+"\n"
     return final

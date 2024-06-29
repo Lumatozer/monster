@@ -1,11 +1,9 @@
 <script>
     {signals}
-    {js}
+    var a=Signal("a", false)
+    setInterval(()=>{
+        a.setValue(!a.Value())
+    }, 1000)
 </script>
 
-<div>
-    <if a>
-        hi
-        {a}
-    </if>
-</div>
+{component}
