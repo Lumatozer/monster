@@ -1,5 +1,13 @@
-<link rel="stylesheet" href="main.css">
-
-<div class="wrapper">
-    {ip}
+<div>
+    <script type="module">
+        import { Signal, DerivedFrom, OnChange } from "./signals.js"
+        var a=Signal("a", "hi")
+        var b=DerivedFrom("b", ()=>{
+            return a.Value()+" hello"
+        }, ["a"])
+        OnChange("b", ()=>{
+            console.log("b changed to", b.Value())
+        })
+        a.setValue("hi,")
+    </script>
 </div>

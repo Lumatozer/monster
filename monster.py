@@ -50,6 +50,83 @@ def render(path, variables=None):
         component=component.replace(x, out)
     return component
 
+def Tag():
+    return {"name":"", "attributes":{}, "signals":[], "children":[]}
+
+def Attribute():
+    return {"id":"", "value":""}
+
+def tokeniser(code):
+    out=[]
+    i=-1
+    cache=""
+    in_string=False
+    while True:
+        i+=1
+        if i>=len(code):
+            break
+        if code[i]=="\"":
+            out.append({"type":"quote", "value":"\""})
+            continue
+        if code[i]=="'":
+            out.append({"type":"quote", "value":"'"})
+            continue
+        if code[i]=="<":
+            if cache!="":
+                out.append({"type":"variable", "value":cache})
+                cache=""
+            out.append({"type":"operator", "value":"<"})
+            continue
+        if code[i]==">":
+            if cache!="":
+                out.append({"type":"variable", "value":cache})
+                cache=""
+            out.append({"type":"operator", "value":">"})
+            continue
+        if code[i]=="=":
+            if cache!="":
+                out.append({"type":"variable", "value":cache})
+                cache=""
+            out.append({"type":"operator", "value":"="})
+            continue
+        if code[i]=="/":
+            if cache!="":
+                out.append({"type":"variable", "value":cache})
+                cache=""
+            out.append({"type":"operator", "value":"/"})
+            continue
+        if code[i]==" ":
+            if cache!="":
+                out.append({"type":"variable", "value":cache})
+                cache=""
+            continue
+        if code[i]=="{":
+            if cache!="":
+                out.append({"type":"variable", "value":cache})
+                cache=""
+            out.append({"type":"bracket", "value":"{"})
+            continue
+        if code[i]=="}":
+            if cache!="":
+                out.append({"type":"variable", "value":"}"})
+                cache=""
+            out.append({"type":"bracket", "value":"}"})
+            continue
+        if code[i]=="\n":
+            continue
+        cache+=code[i]
+    if cache!="":
+        out.append({"type":"variable", "value":cache})
+    return out
+
+def parser(component):
+    out=[]
+    reading_tag=0
+    tag_name=""
+    for x in component:
+        if x=="<" and reading_tag==0:
+            reading_tag=1
+
 def init(app):
     MonsterApp=App()
     @app.route('/<path:path>')

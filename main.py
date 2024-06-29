@@ -7,8 +7,7 @@ init(app)
 
 @app.get("/")
 def home():
-    ip_address=request.remote_addr
-    ip=render("ip", locals())
+    signals=render("public/signals.js")
     return render("index", locals())
 
 app.run(host="0.0.0.0", port=int(sys.argv[1]))
