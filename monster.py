@@ -61,12 +61,22 @@ def tokeniser(code):
     i=-1
     cache=""
     in_string=False
+    string_quote=""
     while True:
         i+=1
         if i>=len(code):
             break
+        if in_string:
+            if code[i]==string_quote:
+                out.append({"type":"string", "value":cache})
+                cache=""
+                in_string=False
+                continue
+            cache+=code[i]
+            continue
         if code[i]=="\"":
-            out.append({"type":"quote", "value":"\""})
+            in_string=True
+            string_quote="\""
             continue
         if code[i]=="'":
             out.append({"type":"quote", "value":"'"})
