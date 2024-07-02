@@ -15,8 +15,8 @@
 
 <input id="hi" placeholder="Enter a number" style="border: {number}px solid black;" value="{number}"></input>
 
-<if visible>
-    hi
+<if "number.Value() % 2 == 1" dep:number>
+    {number}
 </if>
 
 <script>

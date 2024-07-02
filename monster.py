@@ -1,4 +1,4 @@
-import uuid, json
+import uuid, json, base64
 from flask import send_from_directory
 
 class App:
@@ -189,10 +189,10 @@ def parser(tokens):
                     if tagStart[index+2]["type"]!="string":
                         attributes[tagStart[index]["value"]]={"type":"signal", "value":tagStart[index+2]["value"]}
                     else:
-                        attributes[tagStart[index]["value"]]={"type":"raw", "value":tagStart[index+2]["value"]}
+                        attributes[tagStart[index]["value"]]={"type":"variable", "value":tagStart[index+2]["value"]}
                     index+=2
                     continue
-                attributes[tagStart[index]["value"]]={"type":"raw", "value":"true"}
+                attributes[tagStart[index]["value"]]={"type":tagStart[index]["type"], "value":"true"}
             out.append({"type":"tag", "value":tagName, "children":parser(tagEnd), "attributes":attributes})
             continue
         out.append(tokens[i])
@@ -237,12 +237,12 @@ def renderTokens(tokens, variables={}):
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"] not in ["if"]:
             tag=tokens[i]
-            final+="<"+tokens[i]["value"]+">"+"\n"+renderTokens(tag["children"], variables=variables)+"\n"
-            final+="</"+tag["value"]+">\n"
+            final+="\n<"+tokens[i]["value"]+">"+"\n"+renderTokens(tag["children"], variables=variables)+"\n"
+            final+="</"+tag["value"]+">"
             if len(tag["attributes"])!=0:
                 script="var parentElement=document.currentScript.previousElementSibling\n"
                 for attribute in tag["attributes"]:
-                    if tag["attributes"][attribute]["type"]=="raw":
+                    if tag["attributes"][attribute]["type"] in ["variable", "signal"]:
                         attributeValue="\""
                         signals=[]
                         cache=""
@@ -277,26 +277,63 @@ def renderTokens(tokens, variables={}):
                 final+="\n<script>"+"(()=>{\n"+script+"\n"+"})()"+"</script>"
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="if":
-            script="<div>\n"+"<script>\nvar parentElement=document.currentScript.parentElement\n"
+            base64Children=base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode()
+            script="\n<div>\n"+"""<script>\nvar parentElement=document.currentScript.parentElement
+                var parentElement=document.currentScript.parentElement
+                var base64="{base64}"
+                var element=document.createElement("div")
+                if ({condition}) {
+                    element.innerHTML=atob(base64)
+                    parentElement.appendChild(element)
+                }
+            """.replace("{base64}", base64Children)
             condition=""
             random_uuid=uuid.uuid4().__str__()
+            ifscript="""
+                    OnChange(\"{attribute}\", ()=>{
+                                if ({random_uuid}) {
+                                    element=document.createElement("div")
+                                    element.innerHTML=atob(base64)
+                                    parentElement.appendChild(element)
+                                    function executeScripts(element) {
+                                        element.querySelectorAll("script").forEach(script => {
+                                            const newScript = document.createElement("script")
+                                            if (script.src) {
+                                                newScript.src = script.src
+                                            } else {
+                                                newScript.textContent = script.textContent
+                                            }
+                                            script.parentNode.replaceChild(newScript, script)
+                                        })
+                                    }
+                                    executeScripts(element)
+                                } else {
+                                    try {
+                                        parentElement.removeChild(element)
+                                    } catch {}
+                                }
+                    })
+                    """
             for attribute in tokens[i]["attributes"]:
-                condition+=f"GetSignal(\"{attribute}\").Value() && "
-                script+=f"""
-                parentElement.style.display=({random_uuid}) ? "" : "none"
-                OnChange(\"{attribute}\", ()=>{{
-                    parentElement.style.display=({random_uuid}) ? "" : "none"
-                }})
-                """
+                if tokens[i]["attributes"][attribute]["type"]!="string":
+                    if attribute.startswith("dep:"):
+                        for attribute in attribute[4:].split(":"):
+                            script+=ifscript.replace("{random_uuid}", random_uuid).replace("{attribute}", attribute)
+                    else:
+                        condition+=f"GetSignal(\"{attribute}\").Value() && "
+                        script+=ifscript.replace("{random_uuid}", random_uuid).replace("{attribute}", attribute)
+                else:
+                    condition+="("+attribute+") && "
+            script=script.replace("{condition}", condition+"true")
             script=script.replace(random_uuid, condition+"true")
-            script+="\n</script>"+renderTokens(tokens[i]["children"], variables)+"</div>"
+            script+="\n</script></div>"
             final+=script
             continue
         if tokens[i]["type"] in ["script", "style"]:
             tag=tokens[i]["type"]
-            final+="<"+tag+">\n"+tokens[i]["value"]+"\n</"+tag+">"
+            final+="\n<"+tag+">\n"+tokens[i]["value"]+"\n</"+tag+">"
             continue
-        final+=tokens[i]["value"]+"\n"
+        final+="\n"+tokens[i]["value"]+"\n"
     return final
 
 def init(app):
