@@ -329,14 +329,14 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
             base64Children=base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode()
             script="\n<div></div>\n"+"""<script>\n(()=>{
                 var parentElement=document.currentScript.previousElementSibling
-                var base64="{base64}"
+                var encodedElement="{encodedElement}"
                 var element=document.createElement("div")
                 var onDom={condition}
                 if ({condition}) {
-                    element.innerHTML=atob(base64)
+                    element.innerHTML=atob(encodedElement)
                     parentElement.appendChild(element)
                 }
-            """.replace("{base64}", base64Children)
+            """.replace("{encodedElement}", base64Children)
             condition=""
             random_uuid=uuid.uuid4().__str__()
             ifscript="""
@@ -347,7 +347,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                                     }
                                     onDom=true
                                     element=document.createElement("div")
-                                    element.innerHTML=atob(base64)
+                                    element.innerHTML=atob(encodedElement)
                                     parentElement.replaceWith(element)
                                     parentElement=element
                                     function executeScripts(element) {
