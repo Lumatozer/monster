@@ -34,7 +34,7 @@ def render(path, variables={}):
     except:
         component=open("components/"+path+".html").read()
     tokens=tokeniser(component)
-    component=renderTokens(parser(tokens=tokens), variables=variables)
+    component=renderTokens(parser(tokens=tokens), variables={"env":variables, "variables":{}})
     replace_maps={}
     for variable in variables:
         if "{"+variable+"}" in component:
@@ -198,7 +198,7 @@ def parser(tokens):
         out.append(tokens[i])
     return out
 
-def renderTokens(tokens, variables={}):
+def renderTokens(tokens, variables={"env":{}, "variables":{}}):
     final=""
     i=-1
     while True:
@@ -206,7 +206,7 @@ def renderTokens(tokens, variables={}):
         if i>=len(tokens):
             break
         if len(tokens)-i>=3 and tokens[i]["type"]=="bracket" and tokens[i]["value"]=="{" and tokens[i+1]["type"]=="variable" and tokens[i+2]["type"]=="bracket" and tokens[i+2]["value"]=="}":
-            if tokens[i+1]["value"] not in variables:
+            if tokens[i+1]["value"] not in variables["env"] and tokens[i+1]["value"] not in variables["variables"]:
                 final+="""
                 <script>
                     (()=>{
@@ -237,10 +237,9 @@ def renderTokens(tokens, variables={}):
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"] not in ["if"]:
             tag=tokens[i]
-            final+="\n<"+tokens[i]["value"]+">"+"\n"+renderTokens(tag["children"], variables=variables)+"\n"
-            final+="</"+tag["value"]+">"
+            final+="\n<"+tokens[i]["value"]
             if len(tag["attributes"])!=0:
-                script="var parentElement=document.currentScript.previousElementSibling\n"
+                script=""
                 for attribute in tag["attributes"]:
                     if tag["attributes"][attribute]["type"] in ["variable", "signal"]:
                         attributeValue="\""
@@ -264,6 +263,9 @@ def renderTokens(tokens, variables={}):
                             else:
                                 attributeValue+=x
                         attributeValue+="\""
+                        if len(signals)==0:
+                            final+=" "+attribute+"="+attributeValue
+                            continue
                         script+=f"""
                         parentElement.setAttribute(\"{attribute}\", {attributeValue})
                         var signals={json.dumps(signals)}
@@ -274,12 +276,16 @@ def renderTokens(tokens, variables={}):
                             }})
                         }}
                         """
-                final+="\n<script>"+"(()=>{\n"+script+"\n"+"})()"+"</script>"
+                final+=">"+"\n"+renderTokens(tag["children"], variables=variables)+"\n"
+                final+="</"+tag["value"]+">"
+                if script!="":
+                    script="var parentElement=document.currentScript.previousElementSibling\n"+script
+                    final+="\n<script>"+"(()=>{\n"+script+"\n"+"})()"+"</script>"
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="if":
             base64Children=base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode()
-            script="\n<div>\n"+"""<script>\n(()=>{var parentElement=document.currentScript.parentElement
-                var parentElement=document.currentScript.parentElement
+            script="\n<div></div>\n"+"""<script>\n(()=>{
+                var parentElement=document.currentScript.previousElementSibling
                 var base64="{base64}"
                 var element=document.createElement("div")
                 var onDom={condition}
@@ -299,7 +305,8 @@ def renderTokens(tokens, variables={}):
                                     onDom=true
                                     element=document.createElement("div")
                                     element.innerHTML=atob(base64)
-                                    parentElement.appendChild(element)
+                                    parentElement.replaceWith(element)
+                                    parentElement=element
                                     function executeScripts(element) {
                                         element.querySelectorAll("script").forEach(script => {
                                             const newScript = document.createElement("script")
@@ -311,7 +318,7 @@ def renderTokens(tokens, variables={}):
                                             script.parentNode.replaceChild(newScript, script)
                                         })
                                     }
-                                    executeScripts(element)
+                                    executeScripts(parentElement)
                                 } else {
                                     try {
                                         parentElement.removeChild(element)
@@ -332,7 +339,7 @@ def renderTokens(tokens, variables={}):
                     condition+="("+attribute+") && "
             script=script.replace("{condition}", condition+"true")
             script=script.replace(random_uuid, condition+"true")
-            script+="})()"+"\n</script></div>"
+            script+="})()"+"\n</script>"
             final+=script
             continue
         if tokens[i]["type"] in ["script", "style"]:
