@@ -328,13 +328,26 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="if":
             base64Children=base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode()
             script="\n<div></div>\n"+"""<script>\n(()=>{
+                function executeScripts(element) {
+                    element.querySelectorAll("script").forEach(script => {
+                        const newScript = document.createElement("script")
+                        if (script.src) {
+                            newScript.src = script.src
+                        } else {
+                            newScript.textContent = script.textContent
+                        }
+                        script.parentNode.replaceChild(newScript, script)
+                    })
+                }
                 var parentElement=document.currentScript.previousElementSibling
                 var encodedElement="{encodedElement}"
                 var element=document.createElement("div")
                 var onDom={condition}
                 if ({condition}) {
                     element.innerHTML=atob(encodedElement)
-                    parentElement.appendChild(element)
+                    parentElement.replaceWith(element)
+                    parentElement=element
+                    executeScripts(parentElement)
                 }
             """.replace("{encodedElement}", base64Children)
             condition=""
@@ -350,23 +363,20 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                                     element.innerHTML=atob(encodedElement)
                                     parentElement.replaceWith(element)
                                     parentElement=element
-                                    function executeScripts(element) {
-                                        element.querySelectorAll("script").forEach(script => {
-                                            const newScript = document.createElement("script")
-                                            if (script.src) {
-                                                newScript.src = script.src
-                                            } else {
-                                                newScript.textContent = script.textContent
-                                            }
-                                            script.parentNode.replaceChild(newScript, script)
-                                        })
-                                    }
                                     executeScripts(parentElement)
+                                    console.log("hi")
                                 } else {
                                     try {
-                                        parentElement.removeChild(element)
+                                        if (!onDom) {
+                                            return
+                                        }
+                                        element=document.createElement("div")
+                                        parentElement.replaceWith(element)
+                                        parentElement=element
                                         onDom=false
-                                    } catch {}
+                                    } catch (e) {
+                                        console.log(e)
+                                    }
                                 }
                     })
                     """
