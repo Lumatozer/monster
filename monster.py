@@ -278,7 +278,7 @@ def renderTokens(tokens, variables={}):
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="if":
             base64Children=base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode()
-            script="\n<div>\n"+"""<script>\nvar parentElement=document.currentScript.parentElement
+            script="\n<div>\n"+"""<script>\n(()=>{var parentElement=document.currentScript.parentElement
                 var parentElement=document.currentScript.parentElement
                 var base64="{base64}"
                 var element=document.createElement("div")
@@ -332,7 +332,7 @@ def renderTokens(tokens, variables={}):
                     condition+="("+attribute+") && "
             script=script.replace("{condition}", condition+"true")
             script=script.replace(random_uuid, condition+"true")
-            script+="\n</script></div>"
+            script+="})()"+"\n</script></div>"
             final+=script
             continue
         if tokens[i]["type"] in ["script", "style"]:
