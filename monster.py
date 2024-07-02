@@ -70,7 +70,7 @@ def tokeniser(code):
                 if j>=len(code):
                     raise Exception("unexpected EOF while tokenising html file")
                 inTag+=code[j]
-                if "</"+tag+">" in inTag:
+                if "</"+tag+">" in inTag and inTag.count("</"+tag+">")==inTag.count("<"+tag+">")+1:
                     inTag=inTag[:len(inTag)-len("</"+tag+">")]
                     break
             i=j
