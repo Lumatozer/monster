@@ -1,26 +1,16 @@
 <script>
-    {signals}
-    var number=Signal("number", 0)
-    var isEven=DerivedFrom("isEven", ()=>{
-        return number.Value()%2==0 ? "even" : "odd"
-    }, ["number"])
-    var visible=Signal("visible", true)
-    setInterval(()=>{
-        visible.setValue(!visible.Value())
-    }, 1000)
-    function textchange(e) {
-        number.setValue(Number(e.target.value))
-    }
+    var a=Signal("a", 2)
 </script>
 
-<input id="hi" placeholder="Enter a number" style="border: {number}px solid black;" value="{number}"></input>
-
-<if "number.Value() > 1" dep:number>
-    {number}
-</if>
+<input placeholder="Border Radius is {a}px" id="hi" style="border: {a}px solid black;" value="{a}"></input>
 
 <script>
-    document.getElementById("hi").addEventListener("input", (e)=>{
-        number.setValue(e.target.value)
+    document.getElementById("hi").addEventListener("input", ()=>{
+        a.setValue(Number(document.getElementById("hi").value))
     })
 </script>
+
+
+<if "a.Value()%2==0 && a.Value()>0" dep:a>
+    {a} is divisble by 2
+</if>

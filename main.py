@@ -1,9 +1,8 @@
-from flask import Flask, request, redirect
-from monster import render, init, tokeniser, parser
+from flask import request, redirect
+from monster import render, tokeniser, parser, Flask
 import sys, json
 
 app = Flask(__name__)
-init(app)
 
 @app.get("/")
 def home():
