@@ -282,6 +282,7 @@ def renderTokens(tokens, variables={}):
                 var parentElement=document.currentScript.parentElement
                 var base64="{base64}"
                 var element=document.createElement("div")
+                var onDom={condition}
                 if ({condition}) {
                     element.innerHTML=atob(base64)
                     parentElement.appendChild(element)
@@ -292,6 +293,10 @@ def renderTokens(tokens, variables={}):
             ifscript="""
                     OnChange(\"{attribute}\", ()=>{
                                 if ({random_uuid}) {
+                                    if (onDom) {
+                                        return
+                                    }
+                                    onDom=true
                                     element=document.createElement("div")
                                     element.innerHTML=atob(base64)
                                     parentElement.appendChild(element)
@@ -310,6 +315,7 @@ def renderTokens(tokens, variables={}):
                                 } else {
                                     try {
                                         parentElement.removeChild(element)
+                                        onDom=false
                                     } catch {}
                                 }
                     })
