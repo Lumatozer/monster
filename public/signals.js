@@ -26,10 +26,6 @@ function OnChange(id, callback) {
     callbacks[id].push(callback)
 }
 
-function DeleteCallback(id, callback) {
-    callbacks[id].filter((x)=>x!=callback)
-}
-
 function DerivedFrom(id, value, dependsOn) {
     if (id==undefined) {
         throw "id cannot be undefined"

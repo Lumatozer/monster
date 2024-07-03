@@ -23,7 +23,7 @@ MonsterDefault="""
     function djb2Hash(t){t=String(t);let e=5381;for(let n=0;n<t.length;n++){e=(e<<5)+e+t.charCodeAt(n)}return e>>>0}
     if (String(djb2Hash(window.localStorage.getItem("MONSTERSIGNALS")))!="{version_hash}") {
         document.cookie="MONSTERSIGNALS=false;expires=Thu, 01 Jan 2049 00:00:00 UTC"
-        console.log(window.location.toString())
+        window.location=String(window.location)
     } else {
         eval(atob(window.localStorage.getItem("MONSTERSIGNALS")))
     }

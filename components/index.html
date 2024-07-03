@@ -1,16 +1,11 @@
 <script>
-    var a=Signal("a", 2)
+    var a=Signal("a", 10)
 </script>
 
-<input placeholder="Border Radius is {a}px" id="hi" style="border: {a}px solid black;" value="{a}"></input>
+<input id="hello" style="border: {a}px solid black;" placeholder="Enter border radius in pixels" value="{a}"></input>
 
 <script>
-    document.getElementById("hi").addEventListener("input", ()=>{
-        a.setValue(Number(document.getElementById("hi").value))
+    document.getElementById("hello").addEventListener("input", ()=>{
+        a.setValue(Number(document.getElementById("hello").value))
     })
 </script>
-
-
-<if "a.Value()%2==0 && a.Value()>0" dep:a>
-    {a} is divisble by 2
-</if>
