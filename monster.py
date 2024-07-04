@@ -412,6 +412,43 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="for":
             pass
+        if tokens[i]["type"]=="tag" and tokens[i]["value"]=="signal":
+            script="""
+                var element=document.createElement("div")
+                var evaluatedHTML=atob("{encodedHTML}")
+                element.innerHTML=evaluatedHTML
+                document.currentScript.insertAdjacentElement("afterend", element)
+                function executeScripts(element) {
+                    element.querySelectorAll("script").forEach(script => {
+                        const newScript = document.createElement("script")
+                        if (script.src) {
+                            newScript.src = script.src
+                        } else {
+                            newScript.textContent = script.textContent
+                        }
+                        script.parentNode.replaceChild(newScript, script)
+                    })
+                }
+                executeScripts(element)
+            """.replace("{encodedHTML}", base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode())
+            for attribute in tokens[i]["attributes"]:
+                script+=f"""
+                    OnChange("{attribute}", ()=>{{
+                        var newElement=document.createElement("div")
+                        newElement.innerHTML=evaluatedHTML
+                        element.replaceWith(newElement)
+                        element=newElement
+                        executeScripts(element)
+                    }})
+                """
+            final+=f"""
+            <script>
+                (()=>{{
+                    {script}
+                }})()
+            </script>
+            """
+            continue
         if tokens[i]["type"] in ["script", "style"]:
             tag=tokens[i]["type"]
             final+="\n<"+tag+">\n"+tokens[i]["value"]+"\n</"+tag+">"
