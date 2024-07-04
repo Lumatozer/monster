@@ -41,6 +41,7 @@ class Flask(Flask):
         def catch_all(path):
             return send_from_directory("public", path)
     def make_response(self, object):
+        object.render
         if isinstance(object, Render):
             if "MONSTERSIGNALS" in request.cookies:
                 if request.cookies["MONSTERSIGNALS"]!="true":
@@ -379,7 +380,6 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                                     parentElement.replaceWith(element)
                                     parentElement=element
                                     executeScripts(parentElement)
-                                    console.log("hi")
                                 } else {
                                     try {
                                         if (!onDom) {
@@ -411,7 +411,63 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
             final+=script
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="for":
-            pass
+            if len(tokens[i]["attributes"])==3:
+                encodedHTML=base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode()
+                script=f"""
+                    var signal=false
+                    if (array.Value!==undefined) {{
+                        var array=array.Value()
+                        signal=true
+                    }}
+                    var element=document.createElement("div")
+                    var innerHTML=""
+                    var encodedHTML=atob("{encodedHTML}")
+                    for (var i=0; i<array.length; i++) {{
+                        innerHTML+=`<script`+`>var {list(tokens[i]["attributes"].keys())[0]}=${{i}}<`+`/script>`+encodedHTML
+                    }}
+                    element.innerHTML=innerHTML
+                    document.currentScript.insertAdjacentElement("afterend", element)
+                    function executeScripts(element) {{
+                        element.querySelectorAll("script").forEach(script => {{
+                            const newScript = document.createElement("script")
+                            if (script.src) {{
+                                newScript.src = script.src
+                            }} else {{
+                                newScript.textContent = script.textContent
+                            }}
+                            script.parentNode.replaceChild(newScript, script)
+                        }})
+                    }}
+                    executeScripts(element)
+                    if (signal) {{
+                        console.log("signal")
+                        OnChange("{list(tokens[i]["attributes"].keys())[2]}", ()=>{{
+                            var array=GetSignal("{list(tokens[i]["attributes"].keys())[2]}").Value()
+                            var newElement=document.createElement("div")
+                            var innerHTML=""
+                            for (var i=0; i<array.length; i++) {{
+                                innerHTML+=`<script`+`>var {list(tokens[i]["attributes"].keys())[0]}=${{i}}<`+`/script>`+encodedHTML
+                            }}
+                            newElement.innerHTML=innerHTML
+                            element.replaceWith(newElement)
+                            element=newElement
+                            function executeScripts(element) {{
+                                element.querySelectorAll("script").forEach(script => {{
+                                    const newScript = document.createElement("script")
+                                    if (script.src) {{
+                                        newScript.src = script.src
+                                    }} else {{
+                                        newScript.textContent = script.textContent
+                                    }}
+                                    script.parentNode.replaceChild(newScript, script)
+                                }})
+                            }}
+                            executeScripts(element)
+                        }})
+                    }}
+                """
+                final+=f"<script>((array)=>{{{script}}})({list(tokens[i]["attributes"].keys())[2]})</script>"
+                continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="signal":
             script="""
                 var element=document.createElement("div")

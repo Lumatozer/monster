@@ -1,15 +1,16 @@
-<script>
-    var a=Signal("a", 10)
-</script>
+<head>
+    
+</head>
 
-<input id="hello" style="border: {a}px solid black;" placeholder="Enter border radius in pixels" value="{a}"></input>
-
-<signal a>
-    {"a.Value()"}
-</signal>
-
-<script>
-    document.getElementById("hello").addEventListener("input", ()=>{
-        a.setValue(Number(document.getElementById("hello").value))
-    })
-</script>
+<body>
+    <script>
+        var array=Signal("array", Array(100).fill(1))
+        setInterval(()=>{
+            array.setValue(Array(array.Value().length+1).fill(1))
+        }, 100)
+    </script>
+    
+    <for i in array>
+        {"i"}
+    </for>
+</body>
