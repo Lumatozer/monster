@@ -250,6 +250,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
         if i>=len(tokens):
             break
         if len(tokens)-i>=3 and tokens[i]["type"]=="bracket" and tokens[i]["value"]=="{" and (tokens[i+1]["type"]=="variable" or tokens[i+1]["type"]=="string") and tokens[i+2]["type"]=="bracket" and tokens[i+2]["value"]=="}":
+            print(variables)
             if tokens[i+1]["type"]=="string":
                 final+="""
                 <script>
@@ -291,7 +292,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     </script>
                     """.replace("{id}", tokens[i+1]["value"])
                 else:
-                    final+="{"+tokens[i+1]["value"]+"}"+"\n\n"
+                    final+=variables["variables"][tokens[i+1]["value"]]+"\n\n"
             i+=2
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"] not in ["if", "for", "signal"]:
@@ -412,62 +413,78 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="for":
             if len(tokens[i]["attributes"])==3:
-                encodedHTML=base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode()
-                script=f"""
-                    var signal=false
-                    if (array.Value!==undefined) {{
-                        var array=array.Value()
-                        signal=true
+                arrayIndex=2
+                IndexUUID=uuid.uuid4().__str__()
+                newVariables=variables
+                newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
+                encodedHTML=base64.b64encode(renderTokens(tokens[i]["children"], newVariables).encode()).decode()
+            if len(tokens[i]["attributes"])==5:
+                arrayIndex=4
+                IndexUUID=uuid.uuid4().__str__()
+                ElementUUID=uuid.uuid4().__str__()
+                newVariables=variables
+                newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
+                newVariables["variables"][list(tokens[i]["attributes"])[2]]=ElementUUID
+                encodedHTML=base64.b64encode(renderTokens(tokens[i]["children"], newVariables).encode()).decode()
+            script=f"""
+                var signal=false
+                if (array.Value!==undefined) {{
+                    var array=array.Value()
+                    signal=true
+                }}
+                var element=document.createElement("div")
+                var innerHTML=""
+                var encodedHTML=atob("{encodedHTML}")
+                for (var i=0; i<array.length; i++) {{
+                    var arrayElement=array[i]
+                    if (typeof arrayElement!=="string") {{
+                        arrayElement=JSON.stringify(arrayElement)
                     }}
-                    var element=document.createElement("div")
-                    var innerHTML=""
-                    var encodedHTML=atob("{encodedHTML}")
-                    for (var i=0; i<array.length; i++) {{
-                        innerHTML+=`<script`+`>var {list(tokens[i]["attributes"].keys())[0]}=${{i}}<`+`/script>`+encodedHTML
-                    }}
-                    element.innerHTML=innerHTML
-                    document.currentScript.insertAdjacentElement("afterend", element)
-                    function executeScripts(element) {{
-                        element.querySelectorAll("script").forEach(script => {{
-                            const newScript = document.createElement("script")
-                            if (script.src) {{
-                                newScript.src = script.src
-                            }} else {{
-                                newScript.textContent = script.textContent
-                            }}
-                            script.parentNode.replaceChild(newScript, script)
-                        }})
-                    }}
-                    executeScripts(element)
-                    if (signal) {{
-                        console.log("signal")
-                        OnChange("{list(tokens[i]["attributes"].keys())[2]}", ()=>{{
-                            var array=GetSignal("{list(tokens[i]["attributes"].keys())[2]}").Value()
-                            var newElement=document.createElement("div")
-                            var innerHTML=""
-                            for (var i=0; i<array.length; i++) {{
-                                innerHTML+=`<script`+`>var {list(tokens[i]["attributes"].keys())[0]}=${{i}}<`+`/script>`+encodedHTML
-                            }}
-                            newElement.innerHTML=innerHTML
-                            element.replaceWith(newElement)
-                            element=newElement
-                            function executeScripts(element) {{
-                                element.querySelectorAll("script").forEach(script => {{
-                                    const newScript = document.createElement("script")
-                                    if (script.src) {{
-                                        newScript.src = script.src
-                                    }} else {{
-                                        newScript.textContent = script.textContent
-                                    }}
-                                    script.parentNode.replaceChild(newScript, script)
-                                }})
-                            }}
-                            executeScripts(element)
-                        }})
-                    }}
-                """
-                final+=f"<script>((array)=>{{{script}}})({list(tokens[i]["attributes"].keys())[2]})</script>"
-                continue
+                    innerHTML+=`<script`+`>var {list(tokens[i]["attributes"].keys())[0]}=${{i}}<`+`/script>`+encodedHTML.replace("{ElementUUID}", arrayElement).replace("{IndexUUID}", String(i))
+                }}
+                element.innerHTML=innerHTML
+                document.currentScript.insertAdjacentElement("afterend", element)
+                function executeScripts(element) {{
+                    element.querySelectorAll("script").forEach(script => {{
+                        const newScript = document.createElement("script")
+                        if (script.src) {{
+                            newScript.src = script.src
+                        }} else {{
+                            newScript.textContent = script.textContent
+                        }}
+                        script.parentNode.replaceChild(newScript, script)
+                    }})
+                }}
+                executeScripts(element)
+                if (signal) {{
+                    console.log("signal")
+                    OnChange("{list(tokens[i]["attributes"].keys())[arrayIndex]}", ()=>{{
+                        var array=GetSignal("{list(tokens[i]["attributes"].keys())[arrayIndex]}").Value()
+                        var newElement=document.createElement("div")
+                        var innerHTML=""
+                        for (var i=0; i<array.length; i++) {{
+                            innerHTML+=`<script`+`>var {list(tokens[i]["attributes"].keys())[0]}=${{i}}<`+`/script>`+encodedHTML.replace("{ElementUUID}", arrayElement).replace("{IndexUUID}", String(i))
+                        }}
+                        newElement.innerHTML=innerHTML
+                        element.replaceWith(newElement)
+                        element=newElement
+                        function executeScripts(element) {{
+                            element.querySelectorAll("script").forEach(script => {{
+                                const newScript = document.createElement("script")
+                                if (script.src) {{
+                                    newScript.src = script.src
+                                }} else {{
+                                    newScript.textContent = script.textContent
+                                }}
+                                script.parentNode.replaceChild(newScript, script)
+                            }})
+                        }}
+                        executeScripts(element)
+                    }})
+                }}
+            """
+            final+=f"\n<script>\n((array)=>{{{script}}})({list(tokens[i]["attributes"].keys())[arrayIndex]})\n</script>\n"
+            continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="signal":
             script="""
                 var element=document.createElement("div")

@@ -4,13 +4,13 @@
 
 <body>
     <script>
-        var array=Signal("array", Array(100).fill(1))
+        var array=Signal("array", Array(1).fill(1))
         setInterval(()=>{
             array.setValue(Array(array.Value().length+1).fill(1))
-        }, 100)
+        }, 1000)
     </script>
     
-    <for i in array>
-        {"i"}
+    <for i and element in array>
+        {element} {i}
     </for>
 </body>
