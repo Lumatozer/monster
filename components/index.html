@@ -4,6 +4,10 @@
 
 <input id="hello" style="border: {a}px solid black;" placeholder="Enter border radius in pixels" value="{a}"></input>
 
+<signal a>
+    {"a.Value()"}
+</signal>
+
 <script>
     document.getElementById("hello").addEventListener("input", ()=>{
         a.setValue(Number(document.getElementById("hello").value))

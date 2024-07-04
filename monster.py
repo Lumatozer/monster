@@ -248,37 +248,52 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
         i+=1
         if i>=len(tokens):
             break
-        if len(tokens)-i>=3 and tokens[i]["type"]=="bracket" and tokens[i]["value"]=="{" and tokens[i+1]["type"]=="variable" and tokens[i+2]["type"]=="bracket" and tokens[i+2]["value"]=="}":
-            if tokens[i+1]["value"] not in variables["env"] and tokens[i+1]["value"] not in variables["variables"]:
+        if len(tokens)-i>=3 and tokens[i]["type"]=="bracket" and tokens[i]["value"]=="{" and (tokens[i+1]["type"]=="variable" or tokens[i+1]["type"]=="string") and tokens[i+2]["type"]=="bracket" and tokens[i+2]["value"]=="}":
+            if tokens[i+1]["type"]=="string":
                 final+="""
                 <script>
                     (()=>{
-                        var signal=GetSignal("{id}")
                         var element=document.createElement("span")
-                        var value=signal.Value()
+                        var value=eval(atob("{toEvaluate}"))
                         if (typeof value!="string") {
                             value=JSON.stringify(value)
                         }
                         element.innerText=value
                         document.currentScript.insertAdjacentElement("afterend", element)
-                        OnChange("{id}", ()=>{
-                            var newElement=document.createElement("span")
+                    })()
+                </script>
+                """.replace("{toEvaluate}", base64.b64encode(tokens[i+1]["value"].encode()).decode())
+            else:
+                if tokens[i+1]["value"] not in variables["env"] and tokens[i+1]["value"] not in variables["variables"]:
+                    final+="""
+                    <script>
+                        (()=>{
+                            var signal=GetSignal("{id}")
+                            var element=document.createElement("span")
                             var value=signal.Value()
                             if (typeof value!="string") {
                                 value=JSON.stringify(value)
                             }
-                            newElement.innerText=value
-                            element.replaceWith(newElement)
-                            element=newElement
-                        })
-                    })()
-                </script>
-                """.replace("{id}", tokens[i+1]["value"])
-            else:
-                final+="{"+tokens[i+1]["value"]+"}"+"\n\n"
+                            element.innerText=value
+                            document.currentScript.insertAdjacentElement("afterend", element)
+                            OnChange("{id}", ()=>{
+                                var newElement=document.createElement("span")
+                                var value=signal.Value()
+                                if (typeof value!="string") {
+                                    value=JSON.stringify(value)
+                                }
+                                newElement.innerText=value
+                                element.replaceWith(newElement)
+                                element=newElement
+                            })
+                        })()
+                    </script>
+                    """.replace("{id}", tokens[i+1]["value"])
+                else:
+                    final+="{"+tokens[i+1]["value"]+"}"+"\n\n"
             i+=2
             continue
-        if tokens[i]["type"]=="tag" and tokens[i]["value"] not in ["if", "for"]:
+        if tokens[i]["type"]=="tag" and tokens[i]["value"] not in ["if", "for", "signal"]:
             tag=tokens[i]
             final+="\n<"+tokens[i]["value"]
             script=""
