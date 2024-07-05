@@ -254,7 +254,6 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
         if i>=len(tokens):
             break
         if len(tokens)-i>=3 and tokens[i]["type"]=="bracket" and tokens[i]["value"]=="{" and (tokens[i+1]["type"]=="variable" or tokens[i+1]["type"]=="string") and tokens[i+2]["type"]=="bracket" and tokens[i+2]["value"]=="}":
-            print(variables)
             if tokens[i+1]["type"]=="string":
                 final+="""
                 <script>
@@ -310,6 +309,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                         signals=[]
                         cache=""
                         inSignal=False
+                        random_uuid=uuid.uuid4().__str__()
                         for x in tag["attributes"][attribute]["value"]:
                             if x=="{":
                                 if not inSignal:
@@ -318,7 +318,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                             if x=="}":
                                 if inSignal:
                                     inSignal=False
-                                    attributeValue+="\"+"+cache+".Value()+\""
+                                    attributeValue+="\"+"+random_uuid+"+\""
                                     signals.append(cache)
                                     cache=""
                                     continue
@@ -330,16 +330,22 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                         if len(signals)==0:
                             final+=" "+attribute+"="+attributeValue
                             continue
-                        script+=f"""
-                        parentElement.setAttribute(\"{attribute}\", {attributeValue})
-                        var signals={json.dumps(signals)}
-                        for (var signal in signals) {{
-                            signal=signals[signal]
-                            OnChange(signal, ()=>{{
-                                parentElement.setAttribute(\"{attribute}\", {attributeValue})
-                            }})
-                        }}
-                        """
+                        for x in signals:
+                            if x in variables["variables"]:
+                                script+=f"""
+                                parentElement.setAttribute(\"{attribute}\", {attributeValue.replace(random_uuid, f"String({x})")})
+                                """
+                            else:
+                                script+=f"""
+                                parentElement.setAttribute(\"{attribute}\", {attributeValue.replace(random_uuid, x+".Value()")})
+                                var signals={json.dumps(signals)}
+                                for (var signal in signals) {{
+                                    signal=signals[signal]
+                                    OnChange(signal, ()=>{{
+                                        parentElement.setAttribute(\"{attribute}\", {attributeValue})
+                                    }})
+                                }}
+                                """
             final+=">"+"\n"+renderTokens(tag["children"], variables=variables)+"\n"
             final+="</"+tag["value"]+">"
             if script!="":
