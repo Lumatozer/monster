@@ -415,20 +415,21 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
             final+=script
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="for":
+            IndexUUID=uuid.uuid4().__str__()
+            ElementUUID=uuid.uuid4().__str__()
+            ElementUUID=""
             if len(tokens[i]["attributes"])==3:
                 arrayIndex=2
-                IndexUUID=uuid.uuid4().__str__()
                 newVariables=variables
                 newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
                 encodedHTML=escapeString(renderTokens(tokens[i]["children"], newVariables))
             if len(tokens[i]["attributes"])==5:
                 arrayIndex=4
-                IndexUUID=uuid.uuid4().__str__()
-                ElementUUID=uuid.uuid4().__str__()
                 newVariables=variables
                 newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
                 newVariables["variables"][list(tokens[i]["attributes"])[2]]=ElementUUID
                 encodedHTML=escapeString(renderTokens(tokens[i]["children"], newVariables))
+            print(len(tokens[i]["attributes"]))
             script=f"""
                 var signal=false
                 if (array.Value!==undefined) {{

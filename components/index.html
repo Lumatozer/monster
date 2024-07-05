@@ -12,7 +12,9 @@
     
     <for i and element in array>
         <if "i%2==0">
-            {i} {element}
+            <for i in array>
+                {i} {element}
+            </for>
         </if>
     </for>
 </body>
