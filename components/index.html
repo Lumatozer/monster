@@ -11,6 +11,8 @@
     </script>
     
     <for i and element in array>
-        {element} {i}
+        <if "i%2==0">
+            {i} {element}
+        </if>
     </for>
 </body>

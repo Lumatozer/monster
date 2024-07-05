@@ -1,8 +1,12 @@
 from os import PathLike
 import uuid, json, base64, flask
 from flask import send_from_directory, request, Flask
+from urllib.parse import quote
 
 FlaskClass=Flask
+
+def escapeString(a):
+    return a.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "\\'").replace("\n", "\\n").replace("`", "\\`").replace("</script>", "</`+`script>")
 
 def djb2_hash(s):
     hash = 5381
@@ -256,7 +260,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 <script>
                     (()=>{
                         var element=document.createElement("span")
-                        var value=eval(atob("{toEvaluate}"))
+                        var value=({toEvaluate})
                         if (typeof value!="string") {
                             value=JSON.stringify(value)
                         }
@@ -264,7 +268,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                         document.currentScript.insertAdjacentElement("afterend", element)
                     })()
                 </script>
-                """.replace("{toEvaluate}", base64.b64encode(tokens[i+1]["value"].encode()).decode())
+                """.replace("{toEvaluate}", tokens[i+1]["value"])
             else:
                 if tokens[i+1]["value"] not in variables["env"] and tokens[i+1]["value"] not in variables["variables"]:
                     final+="""
@@ -343,7 +347,6 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 final+="\n<script>"+"(()=>{\n"+script+"\n"+"})()"+"</script>"
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="if":
-            base64Children=base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode()
             script="\n<div></div>\n"+"""<script>\n(()=>{
                 function executeScripts(element) {
                     element.querySelectorAll("script").forEach(script => {
@@ -357,16 +360,16 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     })
                 }
                 var parentElement=document.currentScript.previousElementSibling
-                var encodedElement="{encodedElement}"
+                var encodedElement=`{encodedElement}`
                 var element=document.createElement("div")
                 var onDom={condition}
                 if ({condition}) {
-                    element.innerHTML=atob(encodedElement)
+                    element.innerHTML=encodedElement
                     parentElement.replaceWith(element)
                     parentElement=element
                     executeScripts(parentElement)
                 }
-            """.replace("{encodedElement}", base64Children)
+            """.replace("{encodedElement}", escapeString(renderTokens(tokens[i]["children"], variables)))
             condition=""
             random_uuid=uuid.uuid4().__str__()
             ifscript="""
@@ -377,7 +380,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                                     }
                                     onDom=true
                                     element=document.createElement("div")
-                                    element.innerHTML=atob(encodedElement)
+                                    element.innerHTML=encodedElement
                                     parentElement.replaceWith(element)
                                     parentElement=element
                                     executeScripts(parentElement)
@@ -417,7 +420,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 IndexUUID=uuid.uuid4().__str__()
                 newVariables=variables
                 newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
-                encodedHTML=base64.b64encode(renderTokens(tokens[i]["children"], newVariables).encode()).decode()
+                encodedHTML=escapeString(renderTokens(tokens[i]["children"], newVariables))
             if len(tokens[i]["attributes"])==5:
                 arrayIndex=4
                 IndexUUID=uuid.uuid4().__str__()
@@ -425,7 +428,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 newVariables=variables
                 newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
                 newVariables["variables"][list(tokens[i]["attributes"])[2]]=ElementUUID
-                encodedHTML=base64.b64encode(renderTokens(tokens[i]["children"], newVariables).encode()).decode()
+                encodedHTML=escapeString(renderTokens(tokens[i]["children"], newVariables))
             script=f"""
                 var signal=false
                 if (array.Value!==undefined) {{
@@ -434,7 +437,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 }}
                 var element=document.createElement("div")
                 var innerHTML=""
-                var encodedHTML=atob("{encodedHTML}")
+                var encodedHTML=`{encodedHTML}`
                 for (var i=0; i<array.length; i++) {{
                     var arrayElement=array[i]
                     if (typeof arrayElement!=="string") {{
@@ -457,7 +460,6 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 }}
                 executeScripts(element)
                 if (signal) {{
-                    console.log("signal")
                     OnChange("{list(tokens[i]["attributes"].keys())[arrayIndex]}", ()=>{{
                         var array=GetSignal("{list(tokens[i]["attributes"].keys())[arrayIndex]}").Value()
                         var newElement=document.createElement("div")
@@ -488,7 +490,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="signal":
             script="""
                 var element=document.createElement("div")
-                var evaluatedHTML=atob("{encodedHTML}")
+                var evaluatedHTML=`{encodedHTML}`
                 element.innerHTML=evaluatedHTML
                 document.currentScript.insertAdjacentElement("afterend", element)
                 function executeScripts(element) {
