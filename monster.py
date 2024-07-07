@@ -490,7 +490,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     }})
                 }}
             """
-            final+=f"\n<script>\n((array)=>{{{script}}})({list(tokens[i]["attributes"].keys())[arrayIndex]})\n</script>\n"
+            final+=f"""\n<script>\n((array)=>{{{script}}})({list(tokens[i]["attributes"].keys())[arrayIndex]})\n</script>\n"""
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="signal":
             script="""
