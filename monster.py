@@ -428,12 +428,19 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 newVariables=variables
                 newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
                 encodedHTML=escapeString(renderTokens(tokens[i]["children"], newVariables))
+                indexVariable=list(tokens[i]["attributes"].keys())[0]
+                elementVariable=""
             if len(tokens[i]["attributes"])==5:
                 arrayIndex=4
                 newVariables=variables
                 newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
                 newVariables["variables"][list(tokens[i]["attributes"])[2]]=ElementUUID
                 encodedHTML=escapeString(renderTokens(tokens[i]["children"], newVariables))
+                indexVariable=list(tokens[i]["attributes"].keys())[0]
+                elementVariable=list(tokens[i]["attributes"].keys())[2]
+            variableDefinition=f"var {indexVariable}=${{i}}"
+            if elementVariable!="":
+                variableDefinition+=f"; var {elementVariable}=${{array[i]}}"
             script=f"""
                 var signal=false
                 if (array.Value!==undefined) {{
@@ -448,7 +455,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     if (typeof arrayElement!=="string") {{
                         arrayElement=JSON.stringify(arrayElement)
                     }}
-                    innerHTML+=`<script`+`>var {list(tokens[i]["attributes"].keys())[0]}=${{i}}<`+`/script>`+encodedHTML.replace("{ElementUUID}", arrayElement).replace("{IndexUUID}", String(i))
+                    innerHTML+=`<script`+`>{variableDefinition}<`+`/script>`+encodedHTML.replace("{ElementUUID}", arrayElement).replace("{IndexUUID}", String(i))
                 }}
                 element.innerHTML=innerHTML
                 document.currentScript.insertAdjacentElement("afterend", element)
@@ -470,7 +477,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                         var newElement=document.createElement("div")
                         var innerHTML=""
                         for (var i=0; i<array.length; i++) {{
-                            innerHTML+=`<script`+`>var {list(tokens[i]["attributes"].keys())[0]}=${{i}}<`+`/script>`+encodedHTML.replace("{ElementUUID}", arrayElement).replace("{IndexUUID}", String(i))
+                            innerHTML+=`<script`+`>{variableDefinition}<`+`/script>`+encodedHTML.replace("{ElementUUID}", arrayElement).replace("{IndexUUID}", String(i))
                         }}
                         newElement.innerHTML=innerHTML
                         element.replaceWith(newElement)
