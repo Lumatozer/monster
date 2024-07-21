@@ -97,7 +97,7 @@ def render(path, variables={}):
         if type(out)==list:
             out="\n".join([str(x) for x in out])
         if isinstance(out, Render):
-            out=Render.render
+            out=out.render
         component=component.replace(x, out)
     return Render(component)
 
