@@ -305,6 +305,8 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     </script>
                     """.replace("{id}", tokens[i+1]["value"])
                 else:
+                    if isinstance(variables["variables"][tokens[i+1]["value"]], Render):
+                        variables["variables"][tokens[i+1]["value"]]=variables["variables"][tokens[i+1]["value"]].render
                     if tokens[i+1]["value"] in variables["variables"]:
                         final+=variables["variables"][tokens[i+1]["value"]]+"\n\n"
                     if tokens[i+1]["value"] in variables["env"]:
