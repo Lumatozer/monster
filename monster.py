@@ -75,12 +75,15 @@ def set_headers(response, path):
     return response
 
 def render(path, variables={}):
+    tokenise=path.endswith(".html")
     try:
         component=open(path).read()
     except:
         component=open("components/"+path+".html").read()
-    tokens=tokeniser(component)
-    component=renderTokens(parser(tokens=tokens), variables={"env":variables, "variables":{}})
+        tokenise=True
+    if tokenise:
+        tokens=tokeniser(component)
+        component=renderTokens(parser(tokens=tokens), variables={"env":variables, "variables":{}})
     replace_maps={}
     for variable in variables:
         if "{"+variable+"}" in component:
