@@ -277,7 +277,11 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                         (()=>{
                             var signal=GetSignal("{id}")
                             var element=document.createElement("span")
-                            var value=signal.Value()
+                            if (signal===undefined) {
+                                var value=eval("{id}")
+                            } else {
+                                var value=signal.Value()
+                            }
                             if (typeof value!="string") {
                                 value=JSON.stringify(value)
                             }
@@ -285,7 +289,11 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                             document.currentScript.insertAdjacentElement("afterend", element)
                             OnChange("{id}", ()=>{
                                 var newElement=document.createElement("span")
-                                var value=signal.Value()
+                                if (signal===undefined) {
+                                    var value=eval("{id}")
+                                } else {
+                                    var value=signal.Value()
+                                }
                                 if (typeof value!="string") {
                                     value=JSON.stringify(value)
                                 }
@@ -333,19 +341,29 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                             final+=" "+attribute+"="+attributeValue
                             continue
                         for x in signals:
+                            doublequotes="\""
                             if x in variables["variables"]:
                                 script+=f"""
                                 parentElement.setAttribute(\"{attribute}\", {attributeValue.replace(random_uuid, f"String({x})")})
                                 """
                             else:
                                 script+=f"""
-                                parentElement.setAttribute(\"{attribute}\", {attributeValue.replace(random_uuid, x+".Value()")})
+                                if (GetSignal("{x}")!==undefined) {{
+                                    parentElement.setAttribute({doublequotes+attribute+doublequotes}, {attributeValue.replace(random_uuid, f"GetSignal({doublequotes+x+doublequotes}).Value()")})
+                                }} else {{
+                                    parentElement.setAttribute({doublequotes+attribute+doublequotes}, {attributeValue.replace(random_uuid, f"String({x})")})
+                                }}
                                 var signals={json.dumps(signals)}
                                 for (var signal in signals) {{
-                                    signal=signals[signal]
-                                    OnChange(signal, ()=>{{
-                                        parentElement.setAttribute(\"{attribute}\", {attributeValue})
-                                    }})
+                                    if (GetSignal(signals[signal])!==undefined) {{
+                                        OnChange(signals[signal], ()=>{{
+                                            if (GetSignal("{x}")!==undefined) {{
+                                                parentElement.setAttribute({doublequotes+attribute+doublequotes}, {attributeValue.replace(random_uuid, f"GetSignal({doublequotes+x+doublequotes}).Value()")})
+                                            }} else {{
+                                                parentElement.setAttribute({doublequotes+attribute+doublequotes}, {attributeValue.replace(random_uuid, f"String({x})")})
+                                            }}
+                                        }})
+                                    }}
                                 }}
                                 """
             final+=">"+"\n"+renderTokens(tag["children"], variables=variables)+"\n"

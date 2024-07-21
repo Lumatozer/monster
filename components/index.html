@@ -4,15 +4,10 @@
 
 <body>
     <script>
-        var array=Signal("array", Array(1).fill(1))
-        setInterval(()=>{
-            array.setValue(Array(array.Value().length+1).fill(1))
-        }, 1000)
+        var a = 10
     </script>
     
-    <for i and element in array>
-        <div style="border: {element}px solid black;">
-            hi {element}
-        </div>
-    </for>
+    <div style="border: {a}px solid black">
+        hi {a}
+    </div>
 </body>
