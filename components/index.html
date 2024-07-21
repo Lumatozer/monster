@@ -4,10 +4,14 @@
 
 <body>
     <script>
-        var a = 10
+        var a = Signal("a", [1, 2, 3, 4])
     </script>
     
-    <div style="border: {a}px solid black">
-        hi {a}
-    </div>
+    <if "true">
+        <for i and _ in a>
+            hi <div>
+                {i} {_}
+            </div>
+        </for>
+    </if>
 </body>

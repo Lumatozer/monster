@@ -458,9 +458,9 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 encodedHTML=escapeString(renderTokens(tokens[i]["children"], newVariables))
                 indexVariable=list(tokens[i]["attributes"].keys())[0]
                 elementVariable=list(tokens[i]["attributes"].keys())[2]
-            variableDefinition=f"var {indexVariable}=${{i}}"
+            variableDefinition=f"`+`var {indexVariable}=`+String(i)+`"
             if elementVariable!="":
-                variableDefinition+=f"; var {elementVariable}=${{array[i]}}"
+                variableDefinition+=f"; var {elementVariable}=`+String(array[i])+`"
             script=f"""
                 var signal=false
                 if (array.Value!==undefined) {{
