@@ -114,7 +114,7 @@ def tokeniser(code):
             tag=out[len(out)-2]["value"]
             out=out[:len(out)-3]
             inTag=""
-            j=i
+            j=i-1
             while True:
                 j+=1
                 if j>=len(code):
