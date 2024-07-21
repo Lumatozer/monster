@@ -45,7 +45,6 @@ class Flask(Flask):
         def catch_all(path):
             return send_from_directory("public", path)
     def make_response(self, object):
-        object.render
         if isinstance(object, Render):
             if "MONSTERSIGNALS" in request.cookies:
                 if request.cookies["MONSTERSIGNALS"]!="true":
