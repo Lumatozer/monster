@@ -305,7 +305,10 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     </script>
                     """.replace("{id}", tokens[i+1]["value"])
                 else:
-                    final+=variables["variables"][tokens[i+1]["value"]]+"\n\n"
+                    if tokens[i+1]["value"] in variables["variables"]:
+                        final+=variables["variables"][tokens[i+1]["value"]]+"\n\n"
+                    if tokens[i+1]["value"] in variables["env"]:
+                        final+=variables["env"][tokens[i+1]["value"]]+"\n\n"
             i+=2
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"] not in ["if", "for", "signal"]:
