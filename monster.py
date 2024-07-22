@@ -509,7 +509,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     if (typeof arrayElement!=="string") {{
                         arrayElement=JSON.stringify(arrayElement)
                     }}
-                    innerHTML+=`<script`+`>{variableDefinition}<`+`/script>`+encodedHTML.replace("{ElementUUID}", arrayElement).replace("{IndexUUID}", String(i))
+                    innerHTML+=`<script`+`>{variableDefinition}<`+`/script>`+encodedHTML.replaceAll("{ElementUUID}", arrayElement).replaceAll("{IndexUUID}", String(i))
                 }}
                 element.innerHTML=innerHTML
                 document.currentScript.insertAdjacentElement("afterend", element)
@@ -532,7 +532,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                         {attributesValue}(newElement)
                         var innerHTML=""
                         for (var i=0; i<array.length; i++) {{
-                            innerHTML+=`<script`+`>{variableDefinition}<`+`/script>`+encodedHTML.replace("{ElementUUID}", arrayElement).replace("{IndexUUID}", String(i))
+                            innerHTML+=`<script`+`>{variableDefinition}<`+`/script>`+encodedHTML.replaceAll("{ElementUUID}", arrayElement).replaceAll("{IndexUUID}", String(i))
                         }}
                         newElement.innerHTML=innerHTML
                         element.replaceWith(newElement)
