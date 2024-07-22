@@ -495,10 +495,13 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
             if elementVariable!="":
                 variableDefinition+=f"; var {elementVariable}=\"`+String(array[i])+`\""
             script=f"""
+                var originalArray=array
                 var signal=false
-                if (array.Value!==undefined) {{
-                    var array=array.Value()
+                if (GetSignal(array)!==undefined) {{
+                    var array=GetSignal(array).Value()
                     signal=true
+                }} else {{
+                    var array=eval(array)
                 }}
                 var element=document.createElement("div");
                 {attributesValue}(element)
@@ -526,8 +529,8 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 }}
                 executeScripts(element)
                 if (signal) {{
-                    OnChange("{list(tokens[i]["attributes"].keys())[arrayIndex]}", ()=>{{
-                        var array=GetSignal("{list(tokens[i]["attributes"].keys())[arrayIndex]}").Value()
+                    OnChange(originalArray, ()=>{{
+                        var array=GetSignal(originalArray).Value()
                         var newElement=document.createElement("div");
                         {attributesValue}(newElement)
                         var innerHTML=""
@@ -552,7 +555,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     }})
                 }}
             """
-            final+=f"""\n<script>\n((array)=>{{{script}}})({list(tokens[i]["attributes"].keys())[arrayIndex]})\n</script>\n"""
+            final+=f"""\n<script>\n((array)=>{{{script}}})(\"{list(tokens[i]["attributes"].keys())[arrayIndex]}\")\n</script>\n"""
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="signal":
             randomUUID=uuid.uuid4().__str__()
