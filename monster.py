@@ -382,28 +382,42 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 final+="\n<script>"+"(()=>{\n"+script+"\n"+"})()"+"</script>"
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="if":
-            script="\n<div></div>\n"+"""<script>\n(()=>{
-                function executeScripts(element) {
-                    element.querySelectorAll("script").forEach(script => {
+            attributes=[]
+            for x in tokens[i]["attributes"]:
+                if tokens[i]["attributes"][x]["value"]!="true":
+                    attributes.append(x)
+            attributesValue=""
+            for x in tokens[i]["attributes"]:
+                if x in attributes:
+                    attributesValue+="element.setAttribute(\""+x+"\", \""+tokens[i]["attributes"][x]["value"]+"\")\n"
+            if attributesValue!="":
+                attributesValue="((element)=>{"+attributesValue+"})"
+            else:
+                attributesValue="(()=>{})"
+            script="\n<div></div>\n"+f"""<script>\n(()=>{{
+                function executeScripts(element) {{
+                    element.querySelectorAll("script").forEach(script => {{
                         const newScript = document.createElement("script")
-                        if (script.src) {
+                        if (script.src) {{
                             newScript.src = script.src
-                        } else {
+                        }} else {{
                             newScript.textContent = script.textContent
-                        }
+                        }}
                         script.parentNode.replaceChild(newScript, script)
-                    })
-                }
+                    }})
+                }}
                 var parentElement=document.currentScript.previousElementSibling
-                var encodedElement=`{encodedElement}`
-                var element=document.createElement("div")
-                var onDom={condition}
-                if ({condition}) {
+                var encodedElement=`{{encodedElement}}`
+                var element=document.createElement("div");
+                {attributesValue}(parentElement)
+                var onDom={{condition}}
+                if ({{condition}}) {{
                     element.innerHTML=encodedElement
+                    {attributesValue}(element)
                     parentElement.replaceWith(element)
                     parentElement=element
                     executeScripts(parentElement)
-                }
+                }}
             """.replace("{encodedElement}", escapeString(renderTokens(tokens[i]["children"], variables)))
             condition=""
             random_uuid=uuid.uuid4().__str__()
@@ -414,7 +428,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                                         return
                                     }
                                     onDom=true
-                                    element=document.createElement("div")
+                                    element=document.createElement("div");"""+f"{attributesValue}(element)"+"""
                                     element.innerHTML=encodedElement
                                     parentElement.replaceWith(element)
                                     parentElement=element
@@ -424,7 +438,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                                         if (!onDom) {
                                             return
                                         }
-                                        element=document.createElement("div")
+                                        element=document.createElement("div")"""+f"{attributesValue}(element)"+"""
                                         parentElement.replaceWith(element)
                                         parentElement=element
                                         onDom=false
@@ -452,14 +466,15 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="for":
             IndexUUID=uuid.uuid4().__str__()
             ElementUUID=uuid.uuid4().__str__()
-            if len(tokens[i]["attributes"])==3:
+            if len(tokens[i]["attributes"])>2 and list(tokens[i]["attributes"])[1]=="in":
                 arrayIndex=2
                 newVariables=variables
                 newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
                 encodedHTML=escapeString(renderTokens(tokens[i]["children"], newVariables))
                 indexVariable=list(tokens[i]["attributes"].keys())[0]
                 elementVariable=""
-            if len(tokens[i]["attributes"])==5:
+                attributes=list(tokens[i]["attributes"])[3:]
+            if len(tokens[i]["attributes"])>5 and list(tokens[i]["attributes"])[1]=="and":
                 arrayIndex=4
                 newVariables=variables
                 newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
@@ -467,6 +482,15 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 encodedHTML=escapeString(renderTokens(tokens[i]["children"], newVariables))
                 indexVariable=list(tokens[i]["attributes"].keys())[0]
                 elementVariable=list(tokens[i]["attributes"].keys())[2]
+                attributes=list(tokens[i]["attributes"])[5:]
+            attributesValue=""
+            for x in tokens[i]["attributes"]:
+                if x in attributes:
+                    attributesValue+="element.setAttribute(\""+x+"\", \""+tokens[i]["attributes"][x]["value"]+"\")\n"
+            if attributesValue!="":
+                attributesValue="((element)=>{"+attributesValue+"})"
+            else:
+                attributesValue="(()=>{})"
             variableDefinition=f"`+`var {indexVariable}=`+String(i)+`"
             if elementVariable!="":
                 variableDefinition+=f"; var {elementVariable}=\"`+String(array[i])+`\""
@@ -476,7 +500,8 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     var array=array.Value()
                     signal=true
                 }}
-                var element=document.createElement("div")
+                var element=document.createElement("div");
+                {attributesValue}(element)
                 var innerHTML=""
                 var encodedHTML=`{encodedHTML}`
                 for (var i=0; i<array.length; i++) {{
@@ -503,7 +528,8 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 if (signal) {{
                     OnChange("{list(tokens[i]["attributes"].keys())[arrayIndex]}", ()=>{{
                         var array=GetSignal("{list(tokens[i]["attributes"].keys())[arrayIndex]}").Value()
-                        var newElement=document.createElement("div")
+                        var newElement=document.createElement("div");
+                        {attributesValue}(newElement)
                         var innerHTML=""
                         for (var i=0; i<array.length; i++) {{
                             innerHTML+=`<script`+`>{variableDefinition}<`+`/script>`+encodedHTML.replace("{ElementUUID}", arrayElement).replace("{IndexUUID}", String(i))
@@ -529,8 +555,10 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
             final+=f"""\n<script>\n((array)=>{{{script}}})({list(tokens[i]["attributes"].keys())[arrayIndex]})\n</script>\n"""
             continue
         if tokens[i]["type"]=="tag" and tokens[i]["value"]=="signal":
+            randomUUID=uuid.uuid4().__str__()
             script="""
-                var element=document.createElement("div")
+                var element=document.createElement("div");
+                {randomUUID}(element)
                 var evaluatedHTML=`{encodedHTML}`
                 element.innerHTML=evaluatedHTML
                 document.currentScript.insertAdjacentElement("afterend", element)
@@ -546,17 +574,27 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     })
                 }
                 executeScripts(element)
-            """.replace("{encodedHTML}", base64.b64encode(renderTokens(tokens[i]["children"], variables).encode()).decode())
+            """.replace("{encodedHTML}", escapeString(renderTokens(tokens[i]["children"], variables))).replace("{randomUUID}", randomUUID)
+            attributesValue=""
             for attribute in tokens[i]["attributes"]:
-                script+=f"""
-                    OnChange("{attribute}", ()=>{{
-                        var newElement=document.createElement("div")
-                        newElement.innerHTML=evaluatedHTML
-                        element.replaceWith(newElement)
-                        element=newElement
-                        executeScripts(element)
-                    }})
-                """
+                if tokens[i]["attributes"][attribute]["value"]!="true":
+                    attributesValue+="element.setAttribute(\""+attribute+"\", \""+tokens[i]["attributes"][attribute]["value"]+"\")\n"
+                else:
+                    script+=f"""
+                        OnChange("{attribute}", ()=>{{
+                            var newElement=document.createElement("div")
+                            newElement.innerHTML=evaluatedHTML;
+                            {randomUUID}
+                            element.replaceWith(newElement)
+                            element=newElement
+                            executeScripts(element)
+                        }})
+                    """
+            if attributesValue!="":
+                attributesValue="((element)=>{"+attributesValue+"})"
+            else:
+                attributesValue="(()=>{})"
+            script=script.replace(randomUUID, attributesValue)
             final+=f"""
             <script>
                 (()=>{{
