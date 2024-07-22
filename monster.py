@@ -412,7 +412,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 {attributesValue}(parentElement)
                 var onDom={{condition}}
                 if ({{condition}}) {{
-                    element.innerHTML=encodedElement
+                    element.innerHTML=encodedElement;
                     {attributesValue}(element)
                     parentElement.replaceWith(element)
                     parentElement=element
@@ -438,7 +438,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                                         if (!onDom) {
                                             return
                                         }
-                                        element=document.createElement("div")"""+f"{attributesValue}(element)"+"""
+                                        element=document.createElement("div");"""+f"{attributesValue}(element)"+"""
                                         parentElement.replaceWith(element)
                                         parentElement=element
                                         onDom=false
@@ -474,7 +474,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 indexVariable=list(tokens[i]["attributes"].keys())[0]
                 elementVariable=""
                 attributes=list(tokens[i]["attributes"])[3:]
-            if len(tokens[i]["attributes"])>5 and list(tokens[i]["attributes"])[1]=="and":
+            if len(tokens[i]["attributes"])>4 and list(tokens[i]["attributes"])[1]=="and":
                 arrayIndex=4
                 newVariables=variables
                 newVariables["variables"][list(tokens[i]["attributes"])[0]]=IndexUUID
