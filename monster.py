@@ -535,6 +535,10 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                         {attributesValue}(newElement)
                         var innerHTML=""
                         for (var i=0; i<array.length; i++) {{
+                            var arrayElement=array[i]
+                            if (typeof arrayElement!=="string") {{
+                                arrayElement=JSON.stringify(arrayElement)
+                            }}
                             innerHTML+=`<script`+`>{variableDefinition}<`+`/script>`+encodedHTML.replaceAll("{ElementUUID}", arrayElement).replaceAll("{IndexUUID}", String(i))
                         }}
                         newElement.innerHTML=innerHTML
