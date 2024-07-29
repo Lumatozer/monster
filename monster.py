@@ -449,6 +449,8 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                     })
                     """
             for attribute in tokens[i]["attributes"]:
+                if attribute in attributes:
+                    continue
                 if tokens[i]["attributes"][attribute]["type"]!="string":
                     if attribute.startswith("dep:"):
                         for attribute in attribute[4:].split(":"):
