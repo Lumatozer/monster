@@ -593,7 +593,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                         OnChange("{attribute}", ()=>{{
                             var newElement=document.createElement("div")
                             newElement.innerHTML=evaluatedHTML;
-                            {randomUUID}
+                            {randomUUID}(newElement)
                             element.replaceWith(newElement)
                             element=newElement
                             executeScripts(element)
