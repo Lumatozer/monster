@@ -138,10 +138,6 @@ def tokeniser(code):
             in_string=True
             string_quote="\""
             continue
-        if code[i]=="'":
-            in_string=True
-            string_quote="\'"
-            continue
         if code[i]=="<":
             if cache!="":
                 out.append({"type":"variable", "value":cache})
