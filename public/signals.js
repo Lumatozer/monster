@@ -23,6 +23,9 @@ function Signal(id, value) {
 }
 
 function OnChange(id, callback) {
+    if (callbacks[id]===undefined) {
+        callbacks[id]=[]
+    }
     callbacks[id].push(callback)
 }
 
