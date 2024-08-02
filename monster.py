@@ -491,7 +491,7 @@ def renderTokens(tokens, variables={"env":{}, "variables":{}}):
                 attributesValue="(()=>{})"
             variableDefinition=f"`+`var {indexVariable}=`+String(i)+`"
             if elementVariable!="":
-                variableDefinition+=f"; var {elementVariable}=\"`+String(array[i])+`\""
+                variableDefinition+=f"; var {elementVariable}=`+JSON.stringify(array[i])+`"
             script=f"""
                 var originalArray=array
                 var signal=false
