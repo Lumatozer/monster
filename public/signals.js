@@ -38,6 +38,9 @@ function DerivedFrom(id, value, dependsOn) {
         callbacks[id]=[]
     }
     dependsOn.forEach((x)=>{
+        if (callbacks[x]===undefined) {
+            callbacks[ix]=[]
+        }
         callbacks[x].push(async (y)=>{
             var newCallbacks=[]
             for (var i=0; i<callbacks[id].length; i++) {
