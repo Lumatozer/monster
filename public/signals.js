@@ -17,10 +17,20 @@ function AddNode(element, id) {
 }
 
 function RemoveNode(id) {
+    if (id==undefined) {
+        return
+    }
     nodes[id].forEach((x)=>{
         x.remove()
     })
     delete nodes[id]
+    for (let index = 0; index < Object.keys(parents).length; index++) {
+        const element = Object.keys(parents)[index]
+        if (parents[element]===id) {
+            RemoveNode(element)
+            break
+        }
+    }
 }
 
 function Signal(id, value) {
