@@ -248,6 +248,7 @@ def compiler(tokens):
     div.insertAdjacentText("afterend", "{escapeString(token["content"])}");
     const textNode = document.currentScript.nextSibling
     try {{
+        AddNode(document.currentScript, document.currentScript.getAttribute("nodeTracker"))
         AddNode(textNode, document.currentScript.getAttribute("nodeTracker"))
     }} catch {{}}
 }})()
@@ -412,8 +413,8 @@ def compiler(tokens):
                 var id=null;
                 try {
                     id=document.currentScript.getAttribute("nodeTracker")
+                    AddNode(document.currentScript, id)
                 }  catch {}
-                var oldNodes=[]
                 var self=document.currentScript
                 var parentElement=document.currentScript.parentElement
                 var html=`{html}`
@@ -428,6 +429,9 @@ def compiler(tokens):
                     try {
                         Remove()
                     } catch {}
+                    if (id!==null && nodes[id]==undefined) {
+                        throw ""
+                    }
                     element.innerHTML=html
                     lastUUID=crypto.randomUUID();
                     nodes[lastUUID]=[];

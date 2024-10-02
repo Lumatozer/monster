@@ -2,17 +2,13 @@
     var a=Signal("a", 0)
     setInterval(()=>{
         a.setValue(a.Value()+1)
-    }, 1000)
+    }, 10000)
 </script>
 
 <if a condition="a.Value()%2==0">
-    <if a condition="a.Value()%2==0">
-        this should show up
-        <if a condition="a.Value()!=-1">
-            <js a>
-                a.Value()
-            </js>
+    <if a condition="true">
+        <if a condition="true && true">
+            1
         </if>
     </if>
-    
 </if>
