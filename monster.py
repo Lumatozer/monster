@@ -263,7 +263,6 @@ def compiler(tokens):
                             break
                         buffer+=code[i]
                         if buffer.endswith("<js"):
-                            print(buffer)
                             if len(buffer)>3:
                                 raw_attributes.append(buffer[:len(buffer)-3])
                             buffer=""
@@ -340,4 +339,30 @@ def compiler(tokens):
                 child_render="<script>\n"+script+"</script>\n"+child_render
             out+="<"+token["tag"]+rendered_attributes+">\n"+child_render.strip(" \n")+"\n</"+token["tag"]+">"
             continue
+        if token["type"]=="tag" and token["tag"]=="js":
+            out+=f"""
+            <script>
+                (()=>{{
+                    document.currentScript.insertAdjacentText("afterend", "")
+                    var textNode=document.currentScript.nextSibling
+                    document.currentScript.parentNode.appendChild(textNode)
+                    function Render() {{
+                        function _() {{
+                            {token["children"]}
+                        }}
+                        var renderedText=_()
+                        if (!renderedText) {{
+                            renderedText=""
+                        }}
+                        var renderedNode=document.createTextNode(renderedText)
+                        textNode.replaceWith(renderedNode)
+                        textNode=renderedNode
+                    }}
+                    ({json.dumps([x for x in token["args"]])}).forEach((x)=>{{
+                        OnChange(x, Render)
+                    }})
+                    Render()
+                }})()
+            </script>
+            """
     return out

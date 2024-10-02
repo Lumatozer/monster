@@ -3,12 +3,8 @@
     setInterval(()=>{
         a.setValue(a.Value()+1)
     }, 1000)
-    var b=Signal("b", 1)
-    setInterval(()=>{
-        b.setValue(b.Value()+1)
-    }, 500)
 </script>
 
-<div id="<js a>return a.Value()</js> <js b>return b.Value()</js>" class="<js a>return (a.Value()+b.Value())</js>">
-
-</div>
+<js>
+    return a.Value()
+</js>
