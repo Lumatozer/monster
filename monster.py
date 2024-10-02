@@ -394,6 +394,13 @@ def compiler(tokens):
             </script>
             """
         if token["type"]=="tag" and token["tag"]=="if":
+            condition="true"
+            condition_signals=[x for x in token["args"] if x!="condition"]
+            if "condition" in token["args"]:
+                condition=token["args"]["condition"]
+            else:
+                for x in token["args"]:
+                    condition+=f""" & GetSignal("{x}").Value()"""
             out+="""
             <script>
             (()=>{
@@ -402,18 +409,23 @@ def compiler(tokens):
                 var parentElement=document.currentScript.parentElement
                 var html=`{html}`
                 var lastUUID=null;
-                function Render(html) {
-                    var element=document.createElement("div")
+                function Remove() {
                     oldNodes.forEach((x)=>{
                         x.remove()
                     })
                     if (lastUUID!==null) {
-                        nodes[lastUUID].forEach((x)=>{
-                            x.remove()
-                        })
+                        try {
+                            nodes[lastUUID].forEach((x)=>{
+                                x.remove()
+                            })
+                        } catch {}
                         delete nodes[lastUUID]
                     }
                     oldNodes=[]
+                }
+                function Render(html) {
+                    var element=document.createElement("div")
+                    Remove()
                     element.innerHTML=html
                     lastUUID=crypto.randomUUID();
                     nodes[lastUUID]=[];
@@ -436,11 +448,26 @@ def compiler(tokens):
                         self.insertAdjacentElement("afterend", x)
                     })
                 }
-                Render(html);
+                if ({condition}) {
+                    Render(html)
+                }
                 ({signals}).forEach((x)=>{
                     OnChange(x, ()=>{Render(html)})
+                });
+                ({condition_signals}).forEach((x)=>{
+                    OnChange(x, ()=>{
+                        try {
+                            if ({condition}) {
+                                Render(html)
+                            } else {
+                                try {
+                                    Remove()
+                                } catch {}
+                            }
+                        } catch {}
+                    })
                 })
             })()
             </script>
-            """.replace("{signals}", json.dumps([x for x in token["args"]])).replace("{html}", escapeString(compiler(token["children"])))
+            """.replace("{signals}", json.dumps([x for x in token["args"]])).replace("{html}", escapeString(compiler(token["children"]))).replace("{condition_signals}", json.dumps(condition_signals)).replace("{condition}", condition)
     return out
