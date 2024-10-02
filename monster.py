@@ -400,7 +400,7 @@ def compiler(tokens):
                 condition=token["args"]["condition"]
             else:
                 for x in token["args"]:
-                    condition+=f""" & GetSignal("{x}").Value()"""
+                    condition+=f""" && GetSignal("{x}").Value()"""
             out+="""
             <script>
             (()=>{
