@@ -393,6 +393,9 @@ def compiler(tokens):
                 }})()
             </script>
             """
+        if token["type"]=="tag" and token["tag"]=="signal":
+            token["tag"]="if"
+            token["args"]["condition"]="true"
         if token["type"]=="tag" and token["tag"]=="if":
             condition="true"
             condition_signals=[x for x in token["args"] if x!="condition"]
