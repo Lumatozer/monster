@@ -294,6 +294,12 @@ def compiler(tokens):
                             raw_attributes+=id
                             to_render[id]=f"""
                             callbacks.push(()=>{{
+                                try {{
+                                    var result=eval("{escapeString(code_buffer)}")
+                                    if (result) {{
+                                        return ["{id}", result]
+                                    }}
+                                }} catch {{}}
                                 function _() {{
                                     {code_buffer}
                                 }}
