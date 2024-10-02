@@ -238,6 +238,9 @@ def compiler(tokens):
     out=""
     for token in tokens:
         if token["type"]=="raw":
+            token["content"]=token["content"].strip(" \t\n\r")
+            if token["content"]=="":
+                continue
             out+=f"""
 <script>
     document.currentScript.parentNode.appendChild(document.createTextNode("{escapeString(token["content"])}"))
@@ -246,12 +249,11 @@ def compiler(tokens):
             continue
         if token["type"]=="tag" and token["tag"] not in ["js"]:
             script=""
-            to_include_script_tag=False
             rendered_attributes=[]
             for attribute in token["args"]:
                 if "<js" in token["args"][attribute]:
                     to_render={}
-                    raw_attributes=[]
+                    raw_attributes=""
                     code=token["args"][attribute]
                     buffer=""
                     i=-1
@@ -264,7 +266,7 @@ def compiler(tokens):
                         buffer+=code[i]
                         if buffer.endswith("<js"):
                             if len(buffer)>3:
-                                raw_attributes.append(buffer[:len(buffer)-3])
+                                raw_attributes+=buffer[:len(buffer)-3]
                             buffer=""
                             signals_string=""
                             while True:
@@ -289,7 +291,7 @@ def compiler(tokens):
                                 signals_string=signals_string.replace("  ", " ")
                             signals+=signals_string.split() 
                             id=uuid.uuid4().__str__()
-                            raw_attributes.append(id)
+                            raw_attributes+=id
                             to_render[id]=f"""
                             callbacks.push(()=>{{
                                 function _() {{
@@ -299,13 +301,15 @@ def compiler(tokens):
                             }})
                             """
                             continue
+                    if buffer!="":
+                        raw_attributes+=buffer
                     script+=f"""
                         (()=>{{
                             var parentElement=document.currentScript.parentElement
                             var callbacks=[];
                             var signals={json.dumps(signals)};
                             var render=()=>{{
-                                    var out="{" ".join(raw_attributes)}";
+                                    var out="{raw_attributes}";
                                     callbacks.forEach((y)=>{{
                                         try {{
                                             var res=y();

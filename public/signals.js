@@ -62,3 +62,15 @@ function DerivedFrom(id, value, dependsOn) {
 function GetSignal(id) {
     return signals[id]
 }
+
+function executeScripts(element) {
+    element.querySelectorAll("script").forEach(script => {
+        const newScript = document.createElement("script")
+        if (script.src) {
+            newScript.src = script.src
+        } else {
+            newScript.textContent = script.textContent
+        }
+        script.parentNode.replaceChild(newScript, script)
+    })
+}
