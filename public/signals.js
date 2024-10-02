@@ -1,5 +1,6 @@
 var signals={}
 var callbacks={}
+var nodes={}
 
 function Signal(id, value) {
     if (id==undefined) {

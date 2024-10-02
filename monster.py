@@ -7,7 +7,7 @@ import traceback
 FlaskClass=Flask
 
 def escapeString(a):
-    return a.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "\\'").replace("\n", "\\n").replace("`", "\\`").replace("</script>", "</`+`script>")
+    return a.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "\\'").replace("\n", "\\n").replace("`", "\\`").replace("</script>", "</`+`script>").replace("<script>", "<`+`script>")
 
 def djb2_hash(s):
     hash = 5381
@@ -243,11 +243,16 @@ def compiler(tokens):
                 continue
             out+=f"""
 <script>
-    document.currentScript.parentNode.appendChild(document.createTextNode("{escapeString(token["content"])}"))
+(()=>{{
+    const div=document.currentScript
+    div.insertAdjacentText("afterend", "{escapeString(token["content"])}");
+    const textNode = document.currentScript.nextSibling
+    try {{nodes[document.currentScript.getAttribute("nodeTracker")].push(textNode)}} catch {{}}
+}})()
 </script>
 """
             continue
-        if token["type"]=="tag" and token["tag"] not in ["js"]:
+        if token["type"]=="tag" and token["tag"] not in ["js", "signal", "if", "for"]:
             script=""
             rendered_attributes=[]
             for attribute in token["args"]:
@@ -355,17 +360,30 @@ def compiler(tokens):
                 (()=>{{
                     document.currentScript.insertAdjacentText("afterend", "")
                     var textNode=document.currentScript.nextSibling
-                    document.currentScript.parentNode.appendChild(textNode)
+                    try {{
+                        var id=document.currentScript.getAttribute("nodeTracker")
+                        nodes[document.currentScript.getAttribute("nodeTracker")].push(textNode)
+                    }} catch {{}}
                     function Render() {{
                         function _() {{
+                            try {{
+                                var result=eval("{escapeString(token["children"])}")
+                                if (result !== undefined) {{
+                                    return result
+                                }}
+                            }} catch {{}}
                             {token["children"]}
                         }}
                         var renderedText=_()
-                        if (!renderedText) {{
+                        if (renderedText==undefined) {{
                             renderedText=""
                         }}
-                        var renderedNode=document.createTextNode(renderedText)
+                        var renderedNode=document.createTextNode(String(renderedText))
+                        try {{
+                            nodes[id].push(renderedNode)
+                        }} catch {{}}
                         textNode.replaceWith(renderedNode)
+                        textNode.remove()
                         textNode=renderedNode
                     }}
                     ({json.dumps([x for x in token["args"]])}).forEach((x)=>{{
@@ -375,4 +393,54 @@ def compiler(tokens):
                 }})()
             </script>
             """
+        if token["type"]=="tag" and token["tag"]=="if":
+            out+="""
+            <script>
+            (()=>{
+                var oldNodes=[]
+                var self=document.currentScript
+                var parentElement=document.currentScript.parentElement
+                var html=`{html}`
+                var lastUUID=null;
+                function Render(html) {
+                    var element=document.createElement("div")
+                    oldNodes.forEach((x)=>{
+                        x.remove()
+                    })
+                    if (lastUUID!==null) {
+                        nodes[lastUUID].forEach((x)=>{
+                            x.remove()
+                        })
+                        delete nodes[lastUUID]
+                    }
+                    oldNodes=[]
+                    element.innerHTML=html
+                    lastUUID=crypto.randomUUID();
+                    nodes[lastUUID]=[];
+                    Array.from(element.children).reverse().forEach((x)=>{
+                        if (x.tagName=="SCRIPT") {
+                            const newScript = document.createElement("script")
+                            newScript.setAttribute("nodeTracker", lastUUID)
+                            if (x.src) {
+                                newScript.src = x.src
+                            } else {
+                                newScript.textContent = x.textContent
+                            }
+                            x.parentNode.replaceChild(newScript, x)
+                            x=newScript
+                        }
+                        try {
+                            nodes[document.currentScript.getAttribute("nodeTracker")].push(x)
+                        } catch {}
+                        oldNodes.push(x)
+                        self.insertAdjacentElement("afterend", x)
+                    })
+                }
+                Render(html);
+                ({signals}).forEach((x)=>{
+                    OnChange(x, ()=>{Render(html)})
+                })
+            })()
+            </script>
+            """.replace("{signals}", json.dumps([x for x in token["args"]])).replace("{html}", escapeString(compiler(token["children"])))
     return out
