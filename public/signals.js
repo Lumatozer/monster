@@ -12,7 +12,9 @@ function Signal(id, value) {
             try {
                 await callbacks[id][i]()
                 newCallbacks.push(callbacks[id][i])
-            } catch {}
+            } catch (e) {
+                console.error(e)
+            }
         }
         callbacks[id]=newCallbacks
     }}
@@ -47,7 +49,9 @@ function DerivedFrom(id, value, dependsOn) {
                 try {
                     await callbacks[id][i]()
                     newCallbacks.push(callbacks[id][i])
-                } catch {}
+                } catch (e) {
+                    console.error(e)
+                }
             }
             callbacks[id]=newCallbacks
         })

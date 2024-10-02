@@ -83,8 +83,8 @@ def render(path, variables={}):
         tokenise=True
     component=ssr(component, variables)
     if tokenise:
-        pass
-    print(tokeniser(component))
+        tokens=tokeniser(component)
+        component="<body>\n"+compiler(tokens).strip("\n")+"\n</body>"
     return Render(component)
 
 def ssr(code, variables={}):
@@ -178,11 +178,16 @@ def tokeniser(code):
                 out.append({"type":"raw", "content":rawtext})
                 rawtext=""
             buffer=""
+            count=1
             while True:
                 i+=1
                 if i>=code_len:
                     raise EOFError
+                if code[i]=="<":
+                    count+=1
                 if code[i]==">":
+                    count-=1
+                if count==0:
                     break
                 buffer+=code[i]
             name=buffer.split(" ", 1)[0]
@@ -217,10 +222,122 @@ def tokeniser(code):
                 if count==0:
                     break
             buffer=buffer[:len(buffer)-len("</"+name+">")]
-            out.append({"type":"tag", "tag":name, "args":args, "children":tokeniser(buffer)})
+            if name not in ["script", "js"]:
+                children=tokeniser(buffer)
+            else:
+                children=buffer
+            out.append({"type":"tag", "tag":name, "args":args, "children":children})
             buffer=""
             continue
         rawtext+=code[i]
     if rawtext!="":
         out.append({"type":"raw", "content":rawtext})
+    return out
+
+def compiler(tokens):
+    out=""
+    for token in tokens:
+        if token["type"]=="raw":
+            out+=f"""
+<script>
+    document.currentScript.parentNode.appendChild(document.createTextNode("{escapeString(token["content"])}"))
+</script>
+"""
+            continue
+        if token["type"]=="tag" and token["tag"] not in ["js"]:
+            script=""
+            to_include_script_tag=False
+            rendered_attributes=[]
+            for attribute in token["args"]:
+                if "<js" in token["args"][attribute]:
+                    to_render={}
+                    raw_attributes=[]
+                    code=token["args"][attribute]
+                    buffer=""
+                    i=-1
+                    code_len=len(code)
+                    signals=[]
+                    while True:
+                        i+=1
+                        if i>=code_len:
+                            break
+                        buffer+=code[i]
+                        if buffer.endswith("<js"):
+                            print(buffer)
+                            if len(buffer)>3:
+                                raw_attributes.append(buffer[:len(buffer)-3])
+                            buffer=""
+                            signals_string=""
+                            while True:
+                                i+=1
+                                if i>=code_len:
+                                    raise EOFError
+                                signals_string+=code[i]
+                                if signals_string.endswith(">"):
+                                    signals_string=signals_string[:len(signals_string)-1]
+                                    break
+                            signals_string=signals_string.strip(" \r").replace("\t", " ")
+                            code_buffer=""
+                            while True:
+                                i+=1
+                                if i>=code_len:
+                                    raise EOFError
+                                code_buffer+=code[i]
+                                if "</js>" in code_buffer:
+                                    code_buffer=code_buffer[:len(code_buffer)-5]
+                                    break
+                            while "  " in signals_string:
+                                signals_string=signals_string.replace("  ", " ")
+                            signals+=signals_string.split() 
+                            id=uuid.uuid4().__str__()
+                            raw_attributes.append(id)
+                            to_render[id]=f"""
+                            callbacks.push(()=>{{
+                                function _() {{
+                                    {code_buffer}
+                                }}
+                                return ["{id}", _()]
+                            }})
+                            """
+                            continue
+                    script+=f"""
+                        (()=>{{
+                            var parentElement=document.currentScript.parentElement
+                            var callbacks=[];
+                            var signals={json.dumps(signals)};
+                            var render=()=>{{
+                                    var out="{" ".join(raw_attributes)}";
+                                    callbacks.forEach((y)=>{{
+                                        try {{
+                                            var res=y();
+                                            out=out.replace(res[0], String(res[1]));
+                                        }} catch (e) {{
+                                            console.error(e)
+                                        }}
+                                    }})
+                                    parentElement.setAttribute("{attribute}", out)
+                                }}
+                            signals.forEach((x)=>{{
+                                OnChange(x, render)
+                            }});
+                            {chr(10).join([to_render[z] for z in to_render])}
+                            render();
+                        }})();
+                        """
+                else:
+                    if token["args"][attribute]==True:
+                        rendered_attributes.append(attribute)
+                    else:
+                        rendered_attributes.append(attribute+"="+"\""+token["args"][attribute]+"\"")
+            rendered_attributes=" ".join(rendered_attributes)
+            if len(rendered_attributes)!=0:
+                rendered_attributes=" "+rendered_attributes.strip()
+            if token["tag"]=="script":
+                child_render=token["children"]
+            else:
+                child_render=compiler(token["children"])
+            if script!="":
+                child_render="<script>\n"+script+"</script>\n"+child_render
+            out+="<"+token["tag"]+rendered_attributes+">\n"+child_render.strip(" \n")+"\n</"+token["tag"]+">"
+            continue
     return out
