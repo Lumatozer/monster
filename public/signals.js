@@ -1,6 +1,27 @@
 var signals={}
 var callbacks={}
 var nodes={}
+var parents={}
+
+function AddParent(id, parent) {
+    parents[id]=parent
+}
+
+function AddNode(element, id) {
+    var current=nodes[id]
+    while (current) {
+        current.push(element)
+        id=parents[id]
+        current=nodes[id]
+    }
+}
+
+function RemoveNode(id) {
+    nodes[id].forEach((x)=>{
+        x.remove()
+    })
+    delete nodes[id]
+}
 
 function Signal(id, value) {
     if (id==undefined) {

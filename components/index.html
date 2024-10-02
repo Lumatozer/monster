@@ -1,10 +1,7 @@
 <script>
-    var a=Signal("a", 1)
+    var a=Signal("a", 0)
     setInterval(()=>{
         a.setValue(a.Value()+1)
     }, 1000)
 </script>
 
-<signal a>
-    <js>a.Value()</js>
-</signal>

@@ -247,7 +247,9 @@ def compiler(tokens):
     const div=document.currentScript
     div.insertAdjacentText("afterend", "{escapeString(token["content"])}");
     const textNode = document.currentScript.nextSibling
-    try {{nodes[document.currentScript.getAttribute("nodeTracker")].push(textNode)}} catch {{}}
+    try {{
+        AddNode(textNode, document.currentScript.getAttribute("nodeTracker"))
+    }} catch {{}}
 }})()
 </script>
 """
@@ -362,7 +364,7 @@ def compiler(tokens):
                     var textNode=document.currentScript.nextSibling
                     try {{
                         var id=document.currentScript.getAttribute("nodeTracker")
-                        nodes[document.currentScript.getAttribute("nodeTracker")].push(textNode)
+                        AddNode(textNode, document.currentScript.getAttribute("nodeTracker"))
                     }} catch {{}}
                     function Render() {{
                         function _() {{
@@ -380,7 +382,7 @@ def compiler(tokens):
                         }}
                         var renderedNode=document.createTextNode(String(renderedText))
                         try {{
-                            nodes[id].push(renderedNode)
+                            AddNode(renderedNode, id)
                         }} catch {{}}
                         textNode.replaceWith(renderedNode)
                         textNode.remove()
@@ -407,31 +409,31 @@ def compiler(tokens):
             out+="""
             <script>
             (()=>{
+                var id=null;
+                try {
+                    id=document.currentScript.getAttribute("nodeTracker")
+                }  catch {}
                 var oldNodes=[]
                 var self=document.currentScript
                 var parentElement=document.currentScript.parentElement
                 var html=`{html}`
                 var lastUUID=null;
                 function Remove() {
-                    oldNodes.forEach((x)=>{
-                        x.remove()
-                    })
                     if (lastUUID!==null) {
-                        try {
-                            nodes[lastUUID].forEach((x)=>{
-                                x.remove()
-                            })
-                        } catch {}
-                        delete nodes[lastUUID]
+                        RemoveNode(lastUUID)
                     }
-                    oldNodes=[]
                 }
                 function Render(html) {
                     var element=document.createElement("div")
-                    Remove()
+                    try {
+                        Remove()
+                    } catch {}
                     element.innerHTML=html
                     lastUUID=crypto.randomUUID();
                     nodes[lastUUID]=[];
+                    if (id!==null) {
+                        AddParent(lastUUID, id)
+                    }
                     Array.from(element.children).reverse().forEach((x)=>{
                         if (x.tagName=="SCRIPT") {
                             const newScript = document.createElement("script")
@@ -447,30 +449,26 @@ def compiler(tokens):
                         try {
                             nodes[document.currentScript.getAttribute("nodeTracker")].push(x)
                         } catch {}
-                        oldNodes.push(x)
+                        AddNode(x, lastUUID)
                         self.insertAdjacentElement("afterend", x)
                     })
                 }
                 if ({condition}) {
                     Render(html)
                 }
-                ({signals}).forEach((x)=>{
-                    OnChange(x, ()=>{Render(html)})
-                });
                 ({condition_signals}).forEach((x)=>{
                     OnChange(x, ()=>{
-                        try {
-                            if ({condition}) {
-                                Render(html)
-                            } else {
-                                try {
-                                    Remove()
-                                } catch {}
-                            }
-                        } catch {}
+                        if ({condition}) {
+                            Render(html)
+                        } else {
+                            try {
+                                Remove()
+                            } catch {}
+                        }
                     })
                 })
             })()
             </script>
             """.replace("{signals}", json.dumps([x for x in token["args"]])).replace("{html}", escapeString(compiler(token["children"]))).replace("{condition_signals}", json.dumps(condition_signals)).replace("{condition}", condition)
+            continue
     return out
