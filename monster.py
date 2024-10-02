@@ -84,6 +84,7 @@ def render(path, variables={}):
     component=ssr(component, variables)
     if tokenise:
         pass
+    print(tokeniser(component))
     return Render(component)
 
 def ssr(code, variables={}):
@@ -113,12 +114,113 @@ def ssr(code, variables={}):
     for x in toreplace:
         code=str(code).replace(x[0], x[1], 1)
     for x in pysegments:
-        exec("result=None", variables)
-        base="\n".join([" "+x for x in pysegments[x].split("\n")])
-        if base!="":
-            to_evaluate="def _():\n"+base+"\nresult=_()"
-        exec(to_evaluate, variables)
-        if type(variables["result"])!=str:
-            variables["result"]=json.dumps(variables["result"])
-        code=str(code.replace(x, variables["result"]))
+        try:
+            result=eval(pysegments[x])
+            if type(result)!=str:
+                result=json.dumps(result)
+            code=str(code.replace(x, result))
+        except:
+            exec("result=None", variables)
+            base="\n".join([" "+x for x in pysegments[x].split("\n")])
+            if base!="":
+                to_evaluate="def _():\n"+base+"\nresult=_()"
+            exec(to_evaluate, variables)
+            if type(variables["result"])!=str:
+                variables["result"]=json.dumps(variables["result"])
+            code=str(code.replace(x, variables["result"]))
     return code
+
+def innertokeniser(code):
+    out=[]
+    buffer=""
+    instring=False
+    ascii="abcdefghijklmnopqrstuvwxyz"
+    ascii+=ascii.upper()+"1234567890_"
+    for x in code:
+        if not instring and x == "\"":
+            if buffer!="":
+                out.append({"type":"variable", "content":buffer})
+                buffer=""
+            instring=True
+            continue
+        if instring and x=="\"" and not buffer.endswith("\\"):
+            instring=False
+            out.append({"type":"string", "content":buffer})
+            buffer=""
+            continue
+        if not instring and x==" ":
+            if buffer!="":
+                out.append({"type":"variable", "content":buffer})
+                buffer=""
+            continue
+        if not instring and x in "{}[]()-+<>=*^%!@~/":
+            if buffer!="":
+                out.append({"type":"variable", "content":buffer})
+                buffer=""
+            out.append({"type":"operator", "content":x})
+            continue
+        buffer+=x
+    if buffer!="":
+        out.append({"type":"variable", "content":buffer})
+    return out
+
+def tokeniser(code):
+    out=[]
+    i=-1
+    code_len=len(code)
+    rawtext=""
+    while True:
+        i+=1
+        if i>=code_len:
+            break
+        elif code[i]=="<":
+            if rawtext!="":
+                out.append({"type":"raw", "content":rawtext})
+                rawtext=""
+            buffer=""
+            while True:
+                i+=1
+                if i>=code_len:
+                    raise EOFError
+                if code[i]==">":
+                    break
+                buffer+=code[i]
+            name=buffer.split(" ", 1)[0]
+            buffer=buffer[len(name):]
+            args={}
+            tokens=innertokeniser(buffer)
+            j=-1
+            tokens_len=len(tokens)
+            while True:
+                j+=1
+                if j>=tokens_len:
+                    break
+                if tokens_len-j>=3 and tokens[j]["type"]=="variable" and tokens[j+1]["type"]=="operator" and tokens[j+1]["content"]=="=" and tokens[j+2]["type"]=="string":
+                    args[tokens[j]["content"]]=tokens[j+2]["content"]
+                    j+=2
+                    continue
+                if tokens[j]["type"] in ["operator", "string"]:
+                    continue
+                if tokens[j]["type"]=="variable":
+                    args[tokens[j]["content"]]=True
+            buffer=""
+            count=1
+            while True:
+                i+=1
+                if i>=code_len:
+                    raise EOFError
+                buffer+=code[i]
+                if buffer.endswith("</"+name+">"):
+                    count-=1
+                if buffer.endswith("<"+name):
+                    count+=1
+                if count==0:
+                    break
+            buffer=buffer[:len(buffer)-len("</"+name+">")]
+            out.append({"type":"tag", "tag":name, "args":args, "children":tokeniser(buffer)})
+            buffer=""
+            continue
+        rawtext+=code[i]
+    if rawtext!="":
+        out.append({"type":"raw", "content":rawtext})
+    return out
