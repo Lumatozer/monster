@@ -449,6 +449,8 @@ def compiler(tokens):
                             }
                             x.parentNode.replaceChild(newScript, x)
                             x=newScript
+                        } else {
+                            executeScripts(x)
                         }
                         try {
                             nodes[document.currentScript.getAttribute("nodeTracker")].push(x)
