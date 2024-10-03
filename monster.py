@@ -231,7 +231,7 @@ def compiler(tokens, variables={}):
             script=""
             rendered_attributes=[]
             for attribute in token["args"]:
-                if "<js" in token["args"][attribute]:
+                if token["args"][attribute]!=True and "<js" in token["args"][attribute]:
                     to_render={}
                     raw_attributes=""
                     code=token["args"][attribute]
