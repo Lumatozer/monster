@@ -82,12 +82,13 @@ def render(path, variables={}):
         component=open("components/"+path+".html").read()
         tokenise=True
     if tokenise:
-        component=ssr(component, variables)
+        component=ssr(component, "py", variables)
         tokens=tokeniser(component)
         component="<body>\n"+compiler(tokens, variables).strip("\n")+"\n</body>"
+        component=ssr(component, "post", variables)
     return Render(component)
 
-def ssr(code, variables={}):
+def ssr(code, tag="py", variables={}):
     pysegments={}
     toreplace=[]
     buffer=""
@@ -98,18 +99,18 @@ def ssr(code, variables={}):
         if i>=code_len:
             break
         buffer+=code[i]
-        if buffer.endswith("<py>"):
+        if buffer.endswith("<"+tag+">"):
             buffer=""
             while True:
                 i+=1
                 if i>=code_len:
                     break
                 buffer+=code[i]
-                if buffer.endswith("</py>"):
+                if buffer.endswith("</"+tag+">"):
                     break
             uid=uuid.uuid4().__str__()
-            pysegments[uid]=buffer[:len(buffer)-5]
-            toreplace.append(["<py>"+buffer, uid])
+            pysegments[uid]=buffer[:len(buffer)-len(tag)-3]
+            toreplace.append(["<"+tag+">"+buffer, uid])
             buffer=""
     for x in toreplace:
         code=str(code).replace(x[0], x[1], 1)
@@ -222,7 +223,7 @@ def tokeniser(code):
                 if count==0:
                     break
             buffer=buffer[:len(buffer)-len("</"+name+">")]
-            if name not in ["script", "js"]:
+            if name not in ["script", "js", "post"]:
                 children=tokeniser(buffer)
             else:
                 children=buffer
@@ -352,7 +353,7 @@ def compiler(tokens, variables={}):
             rendered_attributes=" ".join(rendered_attributes)
             if len(rendered_attributes)!=0:
                 rendered_attributes=" "+rendered_attributes.strip()
-            if token["tag"]=="script":
+            if token["tag"] in ["script", "post"]:
                 child_render=token["children"]
             else:
                 child_render=compiler(token["children"])
