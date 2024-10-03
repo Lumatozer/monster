@@ -82,22 +82,53 @@ def render(path, variables={}):
         component=open("components/"+path+".html").read()
         tokenise=True
     if tokenise:
+        component=ssr(component, variables)
         tokens=tokeniser(component)
         component="<body>\n"+compiler(tokens, variables).strip("\n")+"\n</body>"
-    toreplace={}
-    for x in variables:
-        if "{"+x+"}" in component:
-            id=uuid.uuid4().__str__()
-            toreplace[id]=variables[x]
-            component=component.replace("{"+x+"}", id)
-    for id in toreplace:
-        if type(toreplace[id])!=str:
-            if type(toreplace[id])==Render:
-                toreplace[id]=toreplace[id].render
-            else:
-                toreplace[id]=json.dumps(toreplace[id])
-        component=component.replace(id, toreplace[id])
     return Render(component)
+
+def ssr(code, variables={}):
+    pysegments={}
+    toreplace=[]
+    buffer=""
+    i=-1
+    code_len=len(code)
+    while True:
+        i+=1
+        if i>=code_len:
+            break
+        buffer+=code[i]
+        if buffer.endswith("<py>"):
+            buffer=""
+            while True:
+                i+=1
+                if i>=code_len:
+                    break
+                buffer+=code[i]
+                if buffer.endswith("</py>"):
+                    break
+            uid=uuid.uuid4().__str__()
+            pysegments[uid]=buffer[:len(buffer)-5]
+            toreplace.append(["<py>"+buffer, uid])
+            buffer=""
+    for x in toreplace:
+        code=str(code).replace(x[0], x[1], 1)
+    for x in pysegments:
+        try:
+            result=eval(pysegments[x])
+            if type(result)!=str:
+                result=json.dumps(result)
+            code=str(code.replace(x, result))
+        except:
+            exec("result=None", variables)
+            base="\n".join([" "+x for x in pysegments[x].split("\n")])
+            if base!="":
+                to_evaluate="def _():\n"+base+"\nresult=_()"
+            exec(to_evaluate, variables)
+            if type(variables["result"])!=str:
+                variables["result"]=json.dumps(variables["result"])
+            code=str(code.replace(x, variables["result"]))
+    return code
 
 def innertokeniser(code):
     out=[]
@@ -191,7 +222,7 @@ def tokeniser(code):
                 if count==0:
                     break
             buffer=buffer[:len(buffer)-len("</"+name+">")]
-            if name not in ["script", "js", "py"]:
+            if name not in ["script", "js"]:
                 children=tokeniser(buffer)
             else:
                 children=buffer
@@ -227,7 +258,7 @@ def compiler(tokens, variables={}):
 </script>
 """
             continue
-        if token["type"]=="tag" and token["tag"] not in ["js", "signal", "if", "for", "py"]:
+        if token["type"]=="tag" and token["tag"] not in ["js", "signal", "if", "for"]:
             script=""
             rendered_attributes=[]
             for attribute in token["args"]:
@@ -328,22 +359,6 @@ def compiler(tokens, variables={}):
             if script!="":
                 child_render="<script>\n"+script+"</script>\n"+child_render
             out+="<"+token["tag"]+rendered_attributes+">\n"+child_render.strip(" \n")+"\n</"+token["tag"]+">"
-            continue
-        if token["type"]=="tag" and token["tag"]=="py":
-            try:
-                result=eval(token["children"], variables, variables)
-                if type(result)!=str:
-                    result=json.dumps(result)
-                out+=result
-            except:
-                exec("result=None", variables, variables)
-                base="\n".join([" "+x for x in token["children"].split("\n")])
-                if base!="":
-                    to_evaluate="def _():\n"+base+"\nresult=_()"
-                exec(to_evaluate, variables)
-                if type(variables["result"])!=str:
-                    variables["result"]=json.dumps(variables["result"])
-                out+=variables["result"]
             continue
         if token["type"]=="tag" and token["tag"]=="js":
             out+=f"""
