@@ -331,12 +331,12 @@ def compiler(tokens, variables={}):
             continue
         if token["type"]=="tag" and token["tag"]=="py":
             try:
-                result=eval(token["children"])
+                result=eval(token["children"], variables, variables)
                 if type(result)!=str:
                     result=json.dumps(result)
                 out+=result
             except:
-                exec("result=None", variables)
+                exec("result=None", variables, variables)
                 base="\n".join([" "+x for x in token["children"].split("\n")])
                 if base!="":
                     to_evaluate="def _():\n"+base+"\nresult=_()"
