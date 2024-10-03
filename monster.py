@@ -117,7 +117,7 @@ def innertokeniser(code):
             out.append({"type":"string", "content":buffer})
             buffer=""
             continue
-        if not instring and x==" ":
+        if not instring and x in " \n\t\r":
             if buffer!="":
                 out.append({"type":"variable", "content":buffer})
                 buffer=""
@@ -159,10 +159,10 @@ def tokeniser(code):
                 if count==0:
                     break
                 buffer+=code[i]
-            name=buffer.split(" ", 1)[0]
-            buffer=buffer[len(name):]
             args={}
             tokens=innertokeniser(buffer)
+            name=tokens[0]["content"]
+            tokens=tokens[1:]
             j=-1
             tokens_len=len(tokens)
             while True:

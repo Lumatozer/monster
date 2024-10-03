@@ -1,10 +1,10 @@
 <script>
-    var a=Signal("a", 0)
+    var a=Signal("a", 1)
     setInterval(()=>{
         a.setValue(a.Value()+1)
     }, 1000)
 </script>
 
-<script>
-    var a={a}
-</script>
+<div style="border: <js a>a.Value()</js>px solid black;">
+    hi
+</div>
