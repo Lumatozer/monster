@@ -333,7 +333,7 @@ def compiler(tokens, variables={}):
                             var callbacks=[];
                             var signals={json.dumps(signals)};
                             var render=()=>{{
-                                    var out="{raw_attributes}";
+                                    var out="{raw_attributes.replace(chr(10), "")}";
                                     callbacks.forEach((y)=>{{
                                         try {{
                                             var res=y();
