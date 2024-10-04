@@ -448,7 +448,11 @@ def compiler(tokens, variables={}):
                     if (id!==null) {
                         AddParent(lastUUID, id)
                     }
-                    Array.from(element.children).forEach((x)=>{
+                    var ArrayA=Array.from(element.children)
+                    if (Array.from(element.children)[0].tagName!="SCRIPT") {
+                        ArrayA=ArrayA.reverse()
+                    }
+                    ArrayA.forEach((x)=>{
                         if (x.tagName=="SCRIPT") {
                             const newScript = document.createElement("script")
                             newScript.setAttribute("nodeTracker", lastUUID)
