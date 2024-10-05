@@ -363,7 +363,15 @@ def compiler(tokens, variables={}):
                 child_render=token["children"]
             else:
                 child_render=compiler(token["children"])
-            out+="<"+token["tag"]+rendered_attributes+">\n"+child_render.strip(" \n")+"\n</"+token["tag"]+">"
+
+            out+="<"+token["tag"]+rendered_attributes+">"
+            exception_tags=["textarea"]
+            if token["tag"] not in exception_tags:
+                out+="\n"
+            out+=child_render.strip(" \n")
+            if token["tag"] not in exception_tags:
+                out+="\n"
+            out+="</"+token["tag"]+">"
             if script!="":
                 out+="<script>\n"+script+"</script>\n"
             continue
