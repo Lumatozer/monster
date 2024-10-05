@@ -116,7 +116,7 @@ def ssr(code, tag="py", variables={}):
         code=str(code).replace(x[0], x[1], 1)
     for x in pysegments:
         try:
-            result=eval(pysegments[x])
+            result=eval(pysegments[x], variables, variables)
             if type(result)!=str:
                 if type(result)==Render:
                     result=result.render
@@ -124,11 +124,11 @@ def ssr(code, tag="py", variables={}):
                     result=json.dumps(result)
             code=str(code.replace(x, result))
         except:
-            exec("result=None", variables)
+            exec("result=None", variables, variables)
             base="\n".join([" "+x for x in pysegments[x].split("\n")])
             if base!="":
                 to_evaluate="def _():\n"+base+"\nresult=_()"
-            exec(to_evaluate, variables)
+            exec(to_evaluate, variables, variables)
             if type(variables["result"])!=str:
                 if type(variables["result"])==Render:
                     variables["result"]=variables["result"].render
