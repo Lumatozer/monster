@@ -224,7 +224,7 @@ def tokeniser(code):
                 buffer+=code[i]
                 if buffer.endswith("</"+name+">"):
                     count-=1
-                if buffer.endswith("<"+name):
+                if buffer.endswith("<"+name+" ") or buffer.endswith("<"+name+">"):
                     count+=1
                 if count==0:
                     break
