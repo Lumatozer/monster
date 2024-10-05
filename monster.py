@@ -317,9 +317,7 @@ def compiler(tokens, variables={}):
                                     if (result) {{
                                         return ["{id}", result]
                                     }}
-                                }} catch (e) {{
-                                    console.error(e)
-                                }}
+                                }} catch {{}}
                                 function _() {{
                                     {code_buffer}
                                 }}
