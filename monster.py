@@ -317,7 +317,9 @@ def compiler(tokens, variables={}):
                                     if (result) {{
                                         return ["{id}", result]
                                     }}
-                                }} catch {{}}
+                                }} catch (e) {{
+                                    console.error(e)
+                                }}
                                 function _() {{
                                     {code_buffer}
                                 }}
@@ -328,8 +330,8 @@ def compiler(tokens, variables={}):
                     if buffer!="":
                         raw_attributes+=buffer
                     script+=f"""
-                        (()=>{{
-                            var parentElement=document.currentScript.parentElement
+                        ((targetElement)=>{{
+                            
                             var callbacks=[];
                             var signals={json.dumps(signals)};
                             var render=()=>{{
@@ -342,14 +344,14 @@ def compiler(tokens, variables={}):
                                             console.error(e)
                                         }}
                                     }})
-                                    parentElement.setAttribute("{attribute}", out)
+                                    targetElement.setAttribute("{attribute}", out)
                                 }}
                             signals.forEach((x)=>{{
                                 OnChange(x, render)
                             }});
                             {chr(10).join([to_render[z] for z in to_render])}
                             render();
-                        }})();
+                        }})(document.currentScript.previousElementSibling);
                         """
                 else:
                     if token["args"][attribute]==True:
@@ -363,9 +365,9 @@ def compiler(tokens, variables={}):
                 child_render=token["children"]
             else:
                 child_render=compiler(token["children"])
-            if script!="":
-                child_render="<script>\n"+script+"</script>\n"+child_render
             out+="<"+token["tag"]+rendered_attributes+">\n"+child_render.strip(" \n")+"\n</"+token["tag"]+">"
+            if script!="":
+                out+="<script>\n"+script+"</script>\n"
             continue
         if token["type"]=="tag" and token["tag"]=="js":
             out+=f"""
