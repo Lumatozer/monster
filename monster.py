@@ -229,7 +229,7 @@ def tokeniser(code):
                 if count==0:
                     break
             buffer=buffer[:len(buffer)-len("</"+name+">")]
-            if name not in ["script", "js", "post"]:
+            if name not in ["script", "js", "post", "style"]:
                 children=tokeniser(buffer)
             else:
                 children=buffer
@@ -359,7 +359,7 @@ def compiler(tokens, variables={}):
             rendered_attributes=" ".join(rendered_attributes)
             if len(rendered_attributes)!=0:
                 rendered_attributes=" "+rendered_attributes.strip()
-            if token["tag"] in ["script", "post"]:
+            if token["tag"] in ["script", "post", "style"]:
                 child_render=token["children"]
             else:
                 child_render=compiler(token["children"])
