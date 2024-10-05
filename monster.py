@@ -443,7 +443,7 @@ def compiler(tokens, variables={}):
                         throw ""
                     }
                     element.innerHTML=html
-                    lastUUID=crypto.randomUUID();
+                    lastUUID=GenerateUUID();
                     nodes[lastUUID]=[];
                     if (id!==null) {
                         AddParent(lastUUID, id)
