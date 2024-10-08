@@ -116,7 +116,8 @@ def ssr(code, tag="py", variables={}):
         code=str(code).replace(x[0], x[1], 1)
     for x in pysegments:
         try:
-            result=eval(pysegments[x].strip("\n\t\r"), variables, variables)
+            pysegments[x]=pysegments[x].strip(" \n\t\r")
+            result=eval(pysegments[x], variables, variables)
             if type(result)!=str:
                 if type(result)==Render:
                     result=result.render
