@@ -116,7 +116,7 @@ def ssr(code, tag="py", variables={}):
         code=str(code).replace(x[0], x[1], 1)
     for x in pysegments:
         try:
-            result=eval(pysegments[x].strip(" \n\t\r"), variables, variables)
+            result=eval(pysegments[x].strip("\n\t\r"), variables, variables)
             if type(result)!=str:
                 if type(result)==Render:
                     result=result.render
@@ -232,6 +232,17 @@ def tokeniser(code):
             if name not in ["script", "js", "post", "style"]:
                 children=tokeniser(buffer)
             else:
+                if name=="post":
+                    min_spaces=9999999
+                    for x in buffer.split("\n"):
+                        if len(x.strip("\t \n\r"))!=0:
+                            spaces=len(x)-len(str(x).lstrip(" \t"))
+                            if spaces<min_spaces:
+                                min_spaces=spaces
+                    new_buffer=[]
+                    for x in buffer.split("\n"):
+                        new_buffer+=[x[min_spaces:]]
+                    buffer="\n".join(new_buffer)
                 children=buffer
             out.append({"type":"tag", "tag":name, "args":args, "children":children})
             buffer=""
