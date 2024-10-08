@@ -161,7 +161,7 @@ def innertokeniser(code):
                 out.append({"type":"variable", "content":buffer})
                 buffer=""
             continue
-        if not instring and x in "{}[]()-+<>=*^%!@~/":
+        if not instring and x in "=":
             if buffer!="":
                 out.append({"type":"variable", "content":buffer})
                 buffer=""
