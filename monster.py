@@ -40,7 +40,7 @@ class Render():
         self.render=render
 
 class Flask(Flask):
-    def __init__(self, import_name: str, static_url_path: str | None = None, static_folder: str | PathLike | None = "static", static_host: str | None = None, host_matching: bool = False, subdomain_matching: bool = False, template_folder: str | None = "templates", instance_path: str | None = None, instance_relative_config: bool = False, root_path: str | None = None):
+    def __init__(self, import_name, static_url_path = None, static_folder = "static", static_host = None, host_matching = False, subdomain_matching = False, template_folder = "templates", instance_path = None, instance_relative_config = False, root_path = None):
         super().__init__(import_name, static_url_path, static_folder, static_host, host_matching, subdomain_matching, template_folder, instance_path, instance_relative_config, root_path)
         @self.route('/<path:path>')
         def catch_all(path):
@@ -54,7 +54,11 @@ class Flask(Flask):
                     return FlaskClass.response_class(MonsterDefault+object.render)
             else:
                 return FlaskClass.response_class(MonsterSave+object.render)
-        return super().make_response(object)
+        resp=super().make_response(object)
+        resp.headers["Cache-Control"]="no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"]="no-cache"
+        resp.headers["Expires"]="0"
+        return resp
 
 def set_headers(response, path):
     if path.endswith('.js'):
@@ -69,9 +73,6 @@ def set_headers(response, path):
         response.headers['Content-Type'] = 'image/gif'
     elif path.endswith('.woff2'):
         response.headers['Content-Type'] = 'font/woff2'
-    response.headers["Cache-Control"]="no-cache, no-store, must-revalidate"
-    response.headers["Pragma"]="no-cache"
-    response.headers["Expires"]="0"
     return response
 
 def render(path, variables={}):
