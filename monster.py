@@ -127,7 +127,7 @@ def ssr(code, tag="py", variables={}):
             code=str(code.replace(x, result))
         except:
             exec("result=None", variables, variables)
-            base="\n".join([" "+x for x in pysegments[x].split("\n")])
+            base="\n".join([" "+x for x in pysegments[x].strip(" \r").split("\n")])
             if base!="":
                 to_evaluate="def _():\n"+base+"\nresult=_()"
             exec(to_evaluate, variables, variables)
