@@ -127,7 +127,7 @@ def ssr(code, tag="py", variables={}):
             code=str(code.replace(x, result))
         except:
             exec("result=None", variables, variables)
-            base="\n".join([" "+x for x in pysegments[x].strip(" \r").split("\n")])
+            base="\n".join([" "+x for x in pysegments[x].strip("\n\r").split("\n")])
             if base!="":
                 to_evaluate="def _():\n"+base+"\nresult=_()"
             exec(to_evaluate, variables, variables)
@@ -470,7 +470,7 @@ def compiler(tokens, variables={}):
                         AddParent(lastUUID, id)
                     }
                     var ArrayA=Array.from(element.children)
-                    if (Array.from(element.children)[0].tagName!="SCRIPT") {
+                    if (Array.from(element.children)[0].tagName=="SCRIPT") {
                         ArrayA=ArrayA.reverse()
                     }
                     ArrayA.forEach((x)=>{
