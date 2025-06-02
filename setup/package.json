@@ -1,0 +1,29 @@
+{
+  "name": "@aludayalu/signals-setup",
+  "version": "1.0.1",
+  "description": "CLI tool to setup @aludayalu/signals in React, Next.js, Vite, and CRA projects",
+  "main": "index.js",
+  "bin": {
+    "signals-setup": "index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "signals",
+    "react",
+    "nextjs",
+    "vite",
+    "babel",
+    "cli"
+  ],
+  "author": "Lumatozer",
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "index.js"
+  ]
+}
