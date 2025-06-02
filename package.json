@@ -1,11 +1,8 @@
 {
   "name": "@aludayalu/signals",
-  "version": "1.0.4",
-  "description": "CLI tool to setup @aludayalu/signals in React, Next.js, Vite, and CRA projects",
+  "version": "1.0.7",
+  "description": "A state management alternative for react based applications",
   "main": "index.js",
-  "bin": {
-    "signals-setup": "index.js"
-  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -24,6 +21,7 @@
     "node": ">=14.0.0"
   },
   "files": [
-    "index.js"
+    "plugin.js",
+    "signals.js"
   ]
 }
