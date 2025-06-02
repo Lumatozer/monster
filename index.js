@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const readline = require('readline');
 
 class SignalsSetup {
   constructor() {
@@ -19,10 +20,11 @@ class SignalsSetup {
       this.loadPackageJson();
       this.detectProjectType();
       this.installPackage();
-      this.configureProject();
+      await this.configureProject();
       
       console.log('\n✅ Setup complete!');
-      console.log('You can now use Signal in your components.');
+      console.log('You can now use Signal from "@aludayalu/signals" in your components.');
+      console.log('🔄 Restart your development server to apply the changes.');
     } catch (error) {
       console.error('❌ Setup failed:', error.message);
       process.exit(1);
@@ -79,7 +81,7 @@ class SignalsSetup {
     return 'npm';
   }
 
-  configureProject() {
+  async configureProject() {
     console.log('⚙️  Configuring babel plugin...');
 
     switch (this.projectType) {
@@ -87,7 +89,7 @@ class SignalsSetup {
         this.configureNextJs();
         break;
       case 'cra':
-        this.configureCRA();
+        await this.configureCRA();
         break;
       case 'vite':
         this.configureVite();
@@ -101,40 +103,104 @@ class SignalsSetup {
   }
 
   configureNextJs() {
-    const nextConfigPath = path.join(this.projectRoot, 'next.config.js');
     const babelrcPath = path.join(this.projectRoot, '.babelrc.json');
 
     if (fs.existsSync(babelrcPath)) {
+      console.log('📄 Found existing .babelrc.json');
       this.updateBabelrc(babelrcPath);
     } else {
+      console.log('📄 No babel configuration found, creating .babelrc.json');
       this.createBabelrc(babelrcPath);
     }
   }
 
-  configureCRA() {
-    const cracoConfigPath = path.join(this.projectRoot, 'craco.config.js');
+  async configureCRA() {
+    console.log('⚠️  Create React App detected.');
+    console.log('');
+    console.log('CRA hides babel configuration by default.');
+    console.log('To use custom babel plugins, you need to eject from CRA.');
+    console.log('');
+    console.log('⚠️  WARNING: Ejecting is permanent and cannot be undone!');
+    console.log('After ejecting, you will be responsible for maintaining the build configuration.');
+    console.log('');
     
-    if (!fs.existsSync(cracoConfigPath)) {
-      console.log('📥 Installing CRACO for CRA babel configuration...');
+    const confirm = await this.promptUser('Eject from Create React App? (yes/no): ');
+    
+    if (confirm.toLowerCase() === 'yes') {
+      console.log('🚀 Ejecting from Create React App...');
+      execSync('npm run eject', { stdio: 'inherit' });
+      
+      // After ejecting, configure babel in package.json
+      this.configureBabelInPackageJsonForCRA();
+    } else {
+      console.log('❌ Setup cancelled. Cannot proceed without ejecting.');
+      console.log('');
+      console.log('Alternative: Use Vite or a custom React setup for easier babel configuration.');
+      process.exit(1);
+    }
+  }
+
+  ensureBabelPreset() {
+    const deps = { ...this.packageJson.dependencies, ...this.packageJson.devDependencies };
+    
+    if (!deps['@babel/preset-react']) {
+      console.log('📥 Installing @babel/preset-react (required for React projects)...');
       const packageManager = this.detectPackageManager();
       const installCommand = packageManager === 'yarn' 
-        ? 'yarn add -D @craco/craco'
-        : 'npm install -D @craco/craco';
+        ? 'yarn add -D @babel/preset-react'
+        : 'npm install -D @babel/preset-react';
       
       execSync(installCommand, { stdio: 'inherit' });
-      
-      this.updatePackageJsonScripts();
+      console.log('✅ @babel/preset-react installed');
+    }
+  }
+
+  configureBabelInPackageJsonForCRA() {
+    if (!this.packageJson.babel) {
+      this.packageJson.babel = {
+        presets: ['react-app'],
+        plugins: []
+      };
     }
 
-    this.createOrUpdateCracoConfig(cracoConfigPath);
+    if (!this.packageJson.babel.plugins) {
+      this.packageJson.babel.plugins = [];
+    }
+
+    if (!this.packageJson.babel.plugins.includes('@aludayalu/signals/plugin')) {
+      this.packageJson.babel.plugins.unshift('@aludayalu/signals/plugin');
+      fs.writeFileSync(this.packageJsonPath, JSON.stringify(this.packageJson, null, 2));
+      console.log('📝 Updated babel configuration in package.json (using react-app preset)');
+    }
+  }
+
+  updateBabelInPackageJson() {
+    if (!this.packageJson.babel) {
+      this.packageJson.babel = {
+        presets: ['@babel/preset-react'],
+        plugins: []
+      };
+    }
+
+    if (!this.packageJson.babel.plugins) {
+      this.packageJson.babel.plugins = [];
+    }
+
+    if (!this.packageJson.babel.plugins.includes('@aludayalu/signals/plugin')) {
+      this.packageJson.babel.plugins.unshift('@aludayalu/signals/plugin');
+      fs.writeFileSync(this.packageJsonPath, JSON.stringify(this.packageJson, null, 2));
+      console.log('📝 Updated babel configuration in package.json');
+    }
   }
 
   configureVite() {
     const viteConfigPath = this.findViteConfig();
     
     if (viteConfigPath) {
+      console.log(`📄 Found existing ${path.basename(viteConfigPath)}`);
       this.updateViteConfig(viteConfigPath);
     } else {
+      console.log('📄 No Vite configuration found, creating vite.config.js');
       this.createViteConfig();
     }
   }
@@ -142,24 +208,33 @@ class SignalsSetup {
   configureReact() {
     const babelrcPath = path.join(this.projectRoot, '.babelrc.json');
     const babelConfigPath = path.join(this.projectRoot, 'babel.config.js');
+    const packageJsonBabel = this.packageJson.babel;
 
     if (fs.existsSync(babelrcPath)) {
+      console.log('📄 Found existing .babelrc.json');
       this.updateBabelrc(babelrcPath);
     } else if (fs.existsSync(babelConfigPath)) {
+      console.log('📄 Found existing babel.config.js');
       this.updateBabelConfig(babelConfigPath);
+    } else if (packageJsonBabel) {
+      console.log('📄 Found babel config in package.json');
+      this.updateBabelInPackageJson();
     } else {
+      console.log('📄 No babel configuration found, creating .babelrc.json');
+      this.ensureBabelPreset();
       this.createBabelrc(babelrcPath);
     }
   }
 
   createBabelrc(filePath) {
+    const preset = this.projectType === 'nextjs' ? 'next/babel' : '@babel/preset-react';
     const config = {
-      presets: this.projectType === 'nextjs' ? ['next/babel'] : ['@babel/preset-react'],
+      presets: [preset],
       plugins: ['@aludayalu/signals/plugin']
     };
 
     fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
-    console.log(`📝 Created ${path.basename(filePath)}`);
+    console.log(`📝 Created ${path.basename(filePath)} with ${preset} preset`);
   }
 
   updateBabelrc(filePath) {
@@ -172,7 +247,9 @@ class SignalsSetup {
     if (!config.plugins.includes('@aludayalu/signals/plugin')) {
       config.plugins.unshift('@aludayalu/signals/plugin');
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
-      console.log(`📝 Updated ${path.basename(filePath)}`);
+      console.log(`📝 Added signals plugin to ${path.basename(filePath)}`);
+    } else {
+      console.log(`✅ Signals plugin already configured in ${path.basename(filePath)}`);
     }
   }
 
@@ -185,35 +262,10 @@ class SignalsSetup {
         'plugins: [\n    "@aludayalu/signals/plugin",'
       );
       fs.writeFileSync(filePath, content);
-      console.log(`📝 Updated ${path.basename(filePath)}`);
-    }
-  }
-
-  createOrUpdateCracoConfig(filePath) {
-    const config = `module.exports = {
-  babel: {
-    plugins: ['@aludayalu/signals/plugin']
-  }
-};`;
-
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, config);
-      console.log('📝 Created craco.config.js');
+      console.log(`📝 Added signals plugin to ${path.basename(filePath)}`);
     } else {
-      console.log('📝 CRACO config exists. Please manually add "@aludayalu/signals/plugin" to babel.plugins array.');
+      console.log(`✅ Signals plugin already configured in ${path.basename(filePath)}`);
     }
-  }
-
-  updatePackageJsonScripts() {
-    this.packageJson.scripts = {
-      ...this.packageJson.scripts,
-      start: 'craco start',
-      build: 'craco build',
-      test: 'craco test'
-    };
-
-    fs.writeFileSync(this.packageJsonPath, JSON.stringify(this.packageJson, null, 2));
-    console.log('📝 Updated package.json scripts for CRACO');
   }
 
   findViteConfig() {
@@ -278,6 +330,20 @@ export default defineConfig({
       fs.writeFileSync(configPath, content);
       console.log(`📝 Updated ${path.basename(configPath)}`);
     }
+  }
+
+  promptUser(question) {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    return new Promise(resolve => {
+      rl.question(question, answer => {
+        rl.close();
+        resolve(answer);
+      });
+    });
   }
 }
 
