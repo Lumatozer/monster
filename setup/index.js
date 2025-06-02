@@ -86,7 +86,7 @@ class SignalsSetup {
 
     switch (this.projectType) {
       case 'nextjs':
-        this.configureNextJs();
+        await this.configureNextJs();
         break;
       case 'cra':
         await this.configureCRA();
@@ -102,7 +102,42 @@ class SignalsSetup {
     console.log('✅ Configuration complete');
   }
 
-  configureNextJs() {
+  async configureNextJs() {
+    // Check if using Turbopack
+    const packageJson = this.packageJson;
+    const devScript = packageJson.scripts?.dev || '';
+    const usingTurbopack = devScript.includes('--turbo');
+
+    if (usingTurbopack) {
+      console.log('⚠️  Turbopack detected in dev script.');
+      console.log('Turbopack does not support Babel configurations yet.');
+      console.log('');
+      console.log('Options:');
+      console.log('1. Remove --turbo flag from dev script (recommended)');
+      console.log('2. Keep Turbopack and wait for Babel support');
+      console.log('');
+      
+      const choice = await this.promptUser('Remove --turbo flag to use Babel? (y/n): ');
+      
+      if (choice.toLowerCase() === 'y' || choice.toLowerCase() === 'yes') {
+        // Remove --turbo flag
+        packageJson.scripts.dev = devScript.replace(/\s*--turbo/g, '').trim();
+        fs.writeFileSync(this.packageJsonPath, JSON.stringify(packageJson, null, 2));
+        console.log('📝 Removed --turbo flag from dev script');
+        
+        // Continue with babel setup
+        this.setupNextJsBabel();
+      } else {
+        console.log('❌ Cannot proceed with Babel setup while using Turbopack.');
+        console.log('Either remove --turbo flag or wait for Turbopack Babel support.');
+        process.exit(1);
+      }
+    } else {
+      this.setupNextJsBabel();
+    }
+  }
+
+  setupNextJsBabel() {
     const babelrcPath = path.join(this.projectRoot, '.babelrc.json');
 
     if (fs.existsSync(babelrcPath)) {
@@ -170,7 +205,9 @@ class SignalsSetup {
     if (!this.packageJson.babel.plugins.includes('@aludayalu/signals/plugin')) {
       this.packageJson.babel.plugins.unshift('@aludayalu/signals/plugin');
       fs.writeFileSync(this.packageJsonPath, JSON.stringify(this.packageJson, null, 2));
-      console.log('📝 Updated babel configuration in package.json (using react-app preset)');
+      console.log('📝 Added signals plugin to babel configuration in package.json (using react-app preset)');
+    } else {
+      console.log('✅ Signals plugin already configured in package.json babel config');
     }
   }
 
@@ -189,7 +226,9 @@ class SignalsSetup {
     if (!this.packageJson.babel.plugins.includes('@aludayalu/signals/plugin')) {
       this.packageJson.babel.plugins.unshift('@aludayalu/signals/plugin');
       fs.writeFileSync(this.packageJsonPath, JSON.stringify(this.packageJson, null, 2));
-      console.log('📝 Updated babel configuration in package.json');
+      console.log('📝 Added signals plugin to babel configuration in package.json');
+    } else {
+      console.log('✅ Signals plugin already configured in package.json babel config');
     }
   }
 
@@ -328,7 +367,9 @@ export default defineConfig({
       }
       
       fs.writeFileSync(configPath, content);
-      console.log(`📝 Updated ${path.basename(configPath)}`);
+      console.log(`📝 Added signals plugin to ${path.basename(configPath)}`);
+    } else {
+      console.log(`✅ Signals plugin already configured in ${path.basename(configPath)}`);
     }
   }
 
