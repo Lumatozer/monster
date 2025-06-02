@@ -1,7 +1,7 @@
 {
   "name": "@aludayalu/signals",
-  "version": "1.0.1",
-  "description": "CLI tool to setup @aludayalusignals in React, Next.js, Vite, and CRA projects",
+  "version": "1.0.2",
+  "description": "CLI tool to setup @aludayalu/signals in React, Next.js, Vite, and CRA projects",
   "main": "index.js",
   "bin": {
     "signals-setup": "index.js"

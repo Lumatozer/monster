@@ -25,7 +25,7 @@ module.exports = function(babel) {
         
         for (const spec of specifiers) {
           if ((t.isImportSpecifier(spec) && spec.imported.name === 'Signal') || (t.isImportDefaultSpecifier(spec) && spec.local.name === 'Signal')) {
-            if (path.node.source.value === '@aludayalusignals') {
+            if (path.node.source.value === '@aludayalu/signals') {
               state.hasSignalImport = true;
             }
           }

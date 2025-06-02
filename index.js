@@ -13,7 +13,7 @@ class SignalsSetup {
   }
 
   async run() {
-    console.log('🚀 Setting up @aludayalusignals...\n');
+    console.log('🚀 Setting up @aludayalu/signals...\n');
 
     try {
       this.loadPackageJson();
@@ -57,12 +57,12 @@ class SignalsSetup {
   }
 
   installPackage() {
-    console.log('📥 Installing @aludayalusignals...');
+    console.log('📥 Installing @aludayalu/signals...');
     
     const packageManager = this.detectPackageManager();
     const installCommand = packageManager === 'yarn' 
-      ? 'yarn add @aludayalusignals'
-      : 'npm install @aludayalusignals';
+      ? 'yarn add @aludayalu/signals'
+      : 'npm install @aludayalu/signals';
 
     try {
       execSync(installCommand, { stdio: 'inherit' });
@@ -155,7 +155,7 @@ class SignalsSetup {
   createBabelrc(filePath) {
     const config = {
       presets: this.projectType === 'nextjs' ? ['next/babel'] : ['@babel/preset-react'],
-      plugins: ['@aludayalusignals/plugin']
+      plugins: ['@aludayalu/signals/plugin']
     };
 
     fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
@@ -169,8 +169,8 @@ class SignalsSetup {
       config.plugins = [];
     }
 
-    if (!config.plugins.includes('@aludayalusignals/plugin')) {
-      config.plugins.unshift('@aludayalusignals/plugin');
+    if (!config.plugins.includes('@aludayalu/signals/plugin')) {
+      config.plugins.unshift('@aludayalu/signals/plugin');
       fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
       console.log(`📝 Updated ${path.basename(filePath)}`);
     }
@@ -179,10 +179,10 @@ class SignalsSetup {
   updateBabelConfig(filePath) {
     let content = fs.readFileSync(filePath, 'utf8');
     
-    if (!content.includes('@aludayalusignals/plugin')) {
+    if (!content.includes('@aludayalu/signals/plugin')) {
       content = content.replace(
         /plugins:\s*\[/,
-        'plugins: [\n    "@aludayalusignals/plugin",'
+        'plugins: [\n    "@aludayalu/signals/plugin",'
       );
       fs.writeFileSync(filePath, content);
       console.log(`📝 Updated ${path.basename(filePath)}`);
@@ -192,7 +192,7 @@ class SignalsSetup {
   createOrUpdateCracoConfig(filePath) {
     const config = `module.exports = {
   babel: {
-    plugins: ['@aludayalusignals/plugin']
+    plugins: ['@aludayalu/signals/plugin']
   }
 };`;
 
@@ -200,7 +200,7 @@ class SignalsSetup {
       fs.writeFileSync(filePath, config);
       console.log('📝 Created craco.config.js');
     } else {
-      console.log('📝 CRACO config exists. Please manually add "@aludayalusignals/plugin" to babel.plugins array.');
+      console.log('📝 CRACO config exists. Please manually add "@aludayalu/signals/plugin" to babel.plugins array.');
     }
   }
 
@@ -241,7 +241,7 @@ export default defineConfig({
   plugins: [
     react({
       babel: {
-        plugins: ['@aludayalusignals/plugin']
+        plugins: ['@aludayalu/signals/plugin']
       }
     })
   ]
@@ -255,13 +255,13 @@ export default defineConfig({
   updateViteConfig(configPath) {
     let content = fs.readFileSync(configPath, 'utf8');
     
-    if (!content.includes('@aludayalusignals/plugin')) {
+    if (!content.includes('@aludayalu/signals/plugin')) {
       if (content.includes('react({')) {
         content = content.replace(
           /react\(\{/,
           `react({
       babel: {
-        plugins: ['@aludayalusignals/plugin']
+        plugins: ['@aludayalu/signals/plugin']
       },`
         );
       } else {
@@ -269,7 +269,7 @@ export default defineConfig({
           /react\(\)/,
           `react({
       babel: {
-        plugins: ['@aludayalusignals/plugin']
+        plugins: ['@aludayalu/signals/plugin']
       }
     })`
         );
