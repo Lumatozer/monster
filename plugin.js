@@ -26,7 +26,7 @@ module.exports = function(babel) {
         for (const spec of specifiers) {
           if ((t.isImportSpecifier(spec) && spec.imported.name === 'Signal') ||
               (t.isImportDefaultSpecifier(spec) && spec.local.name === 'Signal')) {
-            if (path.node.source.value === '@aludayalu/signals') {
+            if (path.node.source.value === '@lumatozer/signals') {
               state.hasSignalImport = true;
             }
           }
@@ -68,26 +68,14 @@ module.exports = function(babel) {
               t.isCallExpression(decl.init) && 
               t.isIdentifier(decl.init.callee, { name: 'Signal' })) {
             
-            // Enforce signalID must be a string literal
-            const signalID = decl.init.arguments[0];
-            if (!t.isStringLiteral(signalID)) {
-              throw new Error(
-                `Signal ID must be a string literal. Found: ${signalID?.type || 'undefined'} at line ${decl.loc?.start?.line || 'unknown'}`
-              );
-            }
-            
-            // Validate signalID is not empty
-            if (signalID.value.trim() === '') {
-              throw new Error(
-                `Signal ID cannot be empty string at line ${decl.loc?.start?.line || 'unknown'}`
-              );
-            }
-            
             state.needsReactImports.add('useState');
+            state.needsReactImports.add('useEffect');
             
             const arrayPattern = decl.id;
-            const setSignalName = arrayPattern.elements[1].name;
+            const signalObjectName = arrayPattern.elements[0] ? arrayPattern.elements[0].name : 'signalObject';
+            const setSignalName = arrayPattern.elements[1] ? arrayPattern.elements[1].name : 'setSignal';
             
+            const signalID = decl.init.arguments[0];
             const defaultValue = decl.init.arguments[1];
             
             const randomUUID = generateUUID();
@@ -96,7 +84,10 @@ module.exports = function(babel) {
             
             decl.init = t.callExpression(
               t.identifier('useState'),
-              defaultValue ? [defaultValue] : []
+              [t.callExpression(
+                t.memberExpression(t.identifier('Signal'), t.identifier('defaultValue')),
+                [signalID, defaultValue || t.nullLiteral()]
+              )]
             );
             
             transformations.push({
@@ -104,14 +95,37 @@ module.exports = function(babel) {
               setSignalName,
               signalID,
               randomUUID,
-              defaultValue
+              defaultValue,
+              signalObjectName
             });
           }
         }
       }
     });
 
-    transformations.forEach(({ varPath, setSignalName, signalID, randomUUID, defaultValue }) => {
+    transformations.forEach(({ varPath, setSignalName, signalID, randomUUID, defaultValue, signalObjectName }) => {
+      // Create useState call with Signal.defaultValue
+      const useStateCall = t.callExpression(
+        t.memberExpression(t.identifier('Signal'), t.identifier('defaultValue')),
+        [signalID, defaultValue || t.nullLiteral()]
+      );
+      
+      // Update the original declaration
+      const originalDecl = varPath.node.declarations[0];
+      originalDecl.init = t.callExpression(t.identifier('useState'), [useStateCall]);
+      
+      // Create dynamic UUID variable that generates at runtime
+      const dynamicUUIDVar = `dynamicUUID_${Math.random().toString(36).substr(2, 9)}`;
+      const dynamicUUIDDeclaration = t.variableDeclaration('const', [
+        t.variableDeclarator(
+          t.identifier(dynamicUUIDVar),
+          t.callExpression(
+            t.memberExpression(t.identifier('Signal'), t.identifier('generateUUID')),
+            []
+          )
+        )
+      ]);
+      
       const setSignalDeclaration = t.variableDeclaration('var', [
         t.variableDeclarator(
           t.identifier(setSignalName),
@@ -128,14 +142,34 @@ module.exports = function(babel) {
       const onChangeCall = t.expressionStatement(
         t.callExpression(
           t.memberExpression(t.identifier('Signal'), t.identifier('onChange')),
-          [signalID, t.identifier(randomUUID), t.stringLiteral(randomUUID), defaultValue || t.nullLiteral()]
+          [signalID, t.identifier(dynamicUUIDVar), t.identifier(randomUUID), defaultValue || t.nullLiteral()]
+        )
+      );
+      
+      const useEffectCall = t.expressionStatement(
+        t.callExpression(
+          t.identifier('useEffect'),
+          [
+            t.arrowFunctionExpression(
+              [],
+              t.blockStatement([
+                t.expressionStatement(
+                  t.callExpression(
+                    t.memberExpression(t.identifier('Signal'), t.identifier('removeListener')),
+                    [signalID, t.identifier(dynamicUUIDVar)]
+                  )
+                )
+              ])
+            ),
+            t.arrayExpression([])
+          ]
         )
       );
       
       const parentBlock = varPath.getFunctionParent().get('body');
       const varIndex = parentBlock.node.body.indexOf(varPath.node);
       
-      parentBlock.node.body.splice(varIndex + 1, 0, setSignalDeclaration, onChangeCall);
+      parentBlock.node.body.splice(varIndex + 1, 0, dynamicUUIDDeclaration, setSignalDeclaration, onChangeCall, useEffectCall);
     });
   }
 
