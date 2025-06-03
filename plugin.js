@@ -24,7 +24,8 @@ module.exports = function(babel) {
         const specifiers = path.node.specifiers;
         
         for (const spec of specifiers) {
-          if ((t.isImportSpecifier(spec) && spec.imported.name === 'Signal') || (t.isImportDefaultSpecifier(spec) && spec.local.name === 'Signal')) {
+          if ((t.isImportSpecifier(spec) && spec.imported.name === 'Signal') ||
+              (t.isImportDefaultSpecifier(spec) && spec.local.name === 'Signal')) {
             if (path.node.source.value === '@aludayalu/signals') {
               state.hasSignalImport = true;
             }
@@ -67,13 +68,26 @@ module.exports = function(babel) {
               t.isCallExpression(decl.init) && 
               t.isIdentifier(decl.init.callee, { name: 'Signal' })) {
             
+            // Enforce signalID must be a string literal
+            const signalID = decl.init.arguments[0];
+            if (!t.isStringLiteral(signalID)) {
+              throw new Error(
+                `Signal ID must be a string literal. Found: ${signalID?.type || 'undefined'} at line ${decl.loc?.start?.line || 'unknown'}`
+              );
+            }
+            
+            // Validate signalID is not empty
+            if (signalID.value.trim() === '') {
+              throw new Error(
+                `Signal ID cannot be empty string at line ${decl.loc?.start?.line || 'unknown'}`
+              );
+            }
+            
             state.needsReactImports.add('useState');
             
             const arrayPattern = decl.id;
-            const signalObjectName = arrayPattern.elements[0].name;
             const setSignalName = arrayPattern.elements[1].name;
             
-            const signalID = decl.init.arguments[0];
             const defaultValue = decl.init.arguments[1];
             
             const randomUUID = generateUUID();
