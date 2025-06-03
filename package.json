@@ -1,6 +1,6 @@
 {
   "name": "@aludayalu/signals",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A state management alternative for react based applications",
   "main": "index.js",
   "scripts": {
@@ -22,6 +22,7 @@
   },
   "files": [
     "plugin.js",
-    "signals.js"
+    "index.js"
   ]
+
 }
