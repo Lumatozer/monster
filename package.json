@@ -16,13 +16,13 @@
   ],
   "author": "Lumatozer",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "react": ">=19.1.0"
+  },
   "engines": {
     "node": ">=14.0.0"
   },
-
   "files": [
-    "plugin.js",
     "index.js"
   ]
 }

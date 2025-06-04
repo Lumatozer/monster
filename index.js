@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react"
+
 var state = {}
 
-export class Signal {
+class Signal {
 
     constructor (signalID, defaultValue) {
         return [defaultValue, (value) => Signal.setValue(signalID, value)]
@@ -41,4 +43,16 @@ export class Signal {
 
         return Array.from(array, x => chars[x % 36]).join('');
     }
+}
+
+export default function GetSignal(id, defaultValue) {
+    const [value, setValue] = useState(Signal.defaultValue(id, defaultValue))
+    var uuid = Signal.generateUUID()
+    Signal.onChange(id, uuid, setValue, defaultValue)
+
+    useEffect(() => {
+        return () => Signal.removeListener(id, setValue)
+    }, [value])
+
+    return [value, (x) => Signal.setValue(id, x)]
 }
