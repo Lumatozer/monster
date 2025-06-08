@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react"
 
 var state = {}
@@ -45,7 +47,7 @@ class Signal {
     }
 }
 
-export default function GetSignal(id, defaultValue) {
+export function useSignal(id, defaultValue) {
     const [value, setValue] = useState(Signal.defaultValue(id, defaultValue))
     var uuid = Signal.generateUUID()
     Signal.onChange(id, uuid, setValue, defaultValue)
@@ -55,4 +57,8 @@ export default function GetSignal(id, defaultValue) {
     }, [value])
 
     return [value, (x) => Signal.setValue(id, x)]
+}
+
+export function InitializeState() {
+    state = {}
 }

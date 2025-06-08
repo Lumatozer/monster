@@ -1,6 +1,6 @@
 {
   "name": "@aludayalu/signals",
-  "version": "1.4.2",
+  "version": "14.0.0",
   "description": "A state management alternative for react based applications",
   "main": "index.js",
   "scripts": {
